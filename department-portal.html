@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ne">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Department Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./frontend/src/styles/main.css" />
+    <script type="module" src="./frontend/src/scripts/department-portal.js"></script>
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="container topbar-inner">
+        <div class="topbar-brand" id="dept-portal-title">विभाग पोर्टल</div>
+        <div class="topbar-meta">
+          <div class="lang-switch">
+            <button type="button" class="lang-chip active" data-lang="ne">नेपाली</button>
+            <button type="button" class="lang-chip" data-lang="en">English</button>
+          </div>
+          <button type="button" class="button secondary compact-button" id="department-logout-button">लगआउट</button>
+        </div>
+      </div>
+    </div>
+
+    <header class="portal-header">
+      <div class="container masthead-inner">
+        <div class="brand">
+          <div class="brand-mark crest">नेपाल</div>
+          <div>
+            <p class="eyebrow small" id="dept-gov-label">नेपाल सरकार</p>
+            <h1 class="font-devanagari" id="dept-main-title">विभागीय ड्यासबोर्ड</h1>
+            <p class="brand-subtitle" id="dept-subtitle">Department portal after successful login</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="section">
+        <div class="container">
+          <div class="login-banner" id="department-welcome-banner"></div>
+          <div class="panel auth-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow small" id="dept-details-eyebrow">विभाग विवरण</p>
+                <h3 id="dept-details-title">लगइन गरिएको विभाग जानकारी</h3>
+              </div>
+            </div>
+            <div class="details-list" id="department-details-list"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

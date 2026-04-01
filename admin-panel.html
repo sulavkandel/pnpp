@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ne">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Panel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./frontend/src/styles/main.css" />
+    <script type="module" src="./frontend/src/scripts/admin-panel.js"></script>
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="container topbar-inner">
+        <div class="topbar-brand" id="admin-panel-title">एडमिन प्यानल</div>
+        <div class="topbar-meta">
+          <div class="lang-switch">
+            <button type="button" class="lang-chip active" data-lang="ne">नेपाली</button>
+            <button type="button" class="lang-chip" data-lang="en">English</button>
+          </div>
+          <button type="button" class="button secondary compact-button" id="admin-logout-button">लगआउट</button>
+        </div>
+      </div>
+    </div>
+
+    <header class="portal-header">
+      <div class="container masthead-inner">
+        <div class="brand">
+          <div class="brand-mark crest">नेपाल</div>
+          <div>
+            <p class="eyebrow small" id="admin-gov-label">नेपाल सरकार</p>
+            <h1 class="font-devanagari" id="admin-main-title">केन्द्रिय प्रशासन प्यानल</h1>
+            <p class="brand-subtitle" id="admin-subtitle">Departments, sections, and ward oversight</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="section">
+        <div class="container">
+          <div class="login-banner" id="admin-welcome-banner"></div>
+
+          <div class="summary-row">
+            <div class="panel summary-card"><strong>10</strong><span id="summary-divisions">महाशाखा</span></div>
+            <div class="panel summary-card"><strong>25</strong><span id="summary-sections">साखा / युनिट</span></div>
+            <div class="panel summary-card"><strong>33</strong><span id="summary-wards">वडा कार्यालय</span></div>
+          </div>
+
+          <div class="grid two-col">
+            <div>
+              <div class="section-intro compact">
+                <span class="eyebrow" id="division-eyebrow">विभागहरू</span>
+                <h2 id="division-title">सबै महाशाखा र साखाहरू</h2>
+              </div>
+              <div class="management-grid" id="division-grid"></div>
+            </div>
+
+            <div>
+              <div class="section-intro compact">
+                <span class="eyebrow" id="form-eyebrow">विभाग खाता सिर्जना</span>
+                <h2 id="form-title">छानिएको विभागका लागि लगइन सिर्जना गर्नुहोस्</h2>
+              </div>
+              <div class="panel auth-panel">
+                <form class="auth-form" id="department-account-form">
+                  <label>
+                    <span id="selected-division-label">छानिएको महाशाखा</span>
+                    <input type="text" id="selected-division-input" readonly />
+                  </label>
+                  <label>
+                    <span id="selected-section-label">साखा / युनिट</span>
+                    <select id="selected-section-input"></select>
+                  </label>
+                  <label>
+                    <span id="department-name-label">अधिकृत / विभाग नाम</span>
+                    <input type="text" id="department-name-input" placeholder="नाम लेख्नुहोस्" />
+                  </label>
+                  <label>
+                    <span id="department-login-label">लगइन आईडी</span>
+                    <input type="text" id="department-login-input" placeholder="login id" />
+                  </label>
+                  <label>
+                    <span id="department-password-label">लगइन पासवर्ड</span>
+                    <input type="password" id="department-password-input" placeholder="password" />
+                  </label>
+                  <button type="button" class="button block dark" id="create-department-account-button">खाता सिर्जना गर्नुहोस्</button>
+                </form>
+                <div class="form-message" id="department-account-message"></div>
+              </div>
+
+              <div class="section-intro compact top-gap">
+                <span class="eyebrow" id="ward-eyebrow">वडा कार्यालयहरू</span>
+                <h2 id="ward-title">३३ वडा पहुँच सूची</h2>
+              </div>
+              <div class="ward-grid" id="ward-grid"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

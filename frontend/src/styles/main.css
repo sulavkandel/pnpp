@@ -39,6 +39,12 @@ select {
   font: inherit;
 }
 
+textarea {
+  font: inherit;
+  min-height: 8rem;
+  resize: vertical;
+}
+
 .font-devanagari {
   font-family: "Noto Sans Devanagari", sans-serif;
 }
@@ -46,6 +52,10 @@ select {
 .container {
   width: min(1180px, calc(100% - 2rem));
   margin: 0 auto;
+}
+
+.narrow-shell {
+  width: min(38rem, 100%);
 }
 
 .topbar {
@@ -358,6 +368,10 @@ select {
   width: 100%;
 }
 
+.compact-button {
+  padding: 0.55rem 0.95rem;
+}
+
 .simple-track {
   grid-template-columns: 0.9fr 1.1fr;
 }
@@ -503,6 +517,67 @@ select {
   color: #c53d3d;
 }
 
+.summary-row,
+.management-grid,
+.ward-grid,
+.details-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.summary-row {
+  margin-bottom: 1.5rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.summary-card {
+  text-align: center;
+}
+
+.summary-card strong {
+  display: block;
+  font-size: 2rem;
+  color: var(--blue-700);
+}
+
+.management-grid {
+  margin-top: 1rem;
+}
+
+.management-card,
+.ward-card,
+.detail-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 1.2rem;
+  padding: 1rem;
+  box-shadow: var(--shadow);
+}
+
+.management-card.active {
+  outline: 2px solid rgba(75, 127, 224, 0.35);
+}
+
+.management-card h3,
+.detail-card h3 {
+  margin: 0;
+}
+
+.management-card p,
+.detail-card p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.ward-grid {
+  margin-top: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.top-gap {
+  margin-top: 1.5rem;
+}
+
 .hidden-section {
   display: none;
 }
@@ -519,6 +594,15 @@ select {
   background: #edf7ef;
   color: var(--green);
   font-weight: 700;
+}
+
+.complaint-form-grid textarea {
+  width: 100%;
+  padding: 0.95rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid var(--line);
+  background: #f9fbff;
+  color: var(--text);
 }
 
 .chatbot-fab {

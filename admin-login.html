@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ne">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./frontend/src/styles/main.css" />
+    <script type="module" src="./frontend/src/scripts/role-login.js"></script>
+  </head>
+  <body data-role-page="admin">
+    <div class="topbar">
+      <div class="container topbar-inner">
+        <div class="topbar-brand" data-role-text="title">एडमिन लगइन</div>
+        <div class="topbar-meta">
+          <a href="./index.html" class="track-link" data-role-text="back">नागरिक लगइनमा फर्कनुहोस्</a>
+          <div class="lang-switch">
+            <button type="button" class="lang-chip active" data-lang="ne">नेपाली</button>
+            <button type="button" class="lang-chip" data-lang="en">English</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <header class="portal-header">
+      <div class="container masthead-inner">
+        <div class="brand">
+          <div class="brand-mark crest">नेपाल</div>
+          <div>
+            <p class="eyebrow small" data-role-text="gov">नेपाल सरकार</p>
+            <h1 class="font-devanagari" data-role-text="heading">केन्द्रिय एडमिन लगइन</h1>
+            <p class="brand-subtitle" data-role-text="subtitle">Administrator access page</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="section">
+        <div class="container narrow-shell">
+          <div class="panel auth-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow small" data-role-text="eyebrow">एडमिन पहुँच</p>
+                <h3 data-role-text="formTitle">एडमिन प्यानलमा लगइन</h3>
+              </div>
+            </div>
+            <form class="auth-form" id="role-login-form">
+              <label>
+                <span data-role-text="userLabel">एडमिन युजरनेम</span>
+                <input type="text" name="loginId" data-role-placeholder="userPlaceholder" placeholder="Admin username" />
+              </label>
+              <label>
+                <span data-role-text="passwordLabel">पासवर्ड</span>
+                <input type="password" name="password" data-role-placeholder="passwordPlaceholder" placeholder="पासवर्ड प्रविष्ट गर्नुहोस्" />
+              </label>
+              <button type="button" class="button block dark" data-role-text="button">एडमिन प्यानलमा लगइन</button>
+            </form>
+            <div class="form-message" id="role-login-message"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

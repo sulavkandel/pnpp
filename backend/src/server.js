@@ -15,7 +15,10 @@ import {
 
 const routes = [
   "POST /api/auth/login",
+  "POST /api/auth/admin-login",
+  "POST /api/auth/department-login",
   "POST /api/auth/register",
+  "POST /api/admin/department-accounts",
   "GET /api/complaints",
   "POST /api/complaints",
   "PATCH /api/complaints/:id/status",
@@ -70,6 +73,11 @@ function sanitizeUser(user) {
     role: user.role,
   };
 }
+
+const adminCredentials = {
+  loginId: "admin",
+  password: "admin",
+};
 
 function createServer({ repositories }) {
   return http.createServer(async (req, res) => {
@@ -188,6 +196,141 @@ function createServer({ repositories }) {
         sendJson(res, 500, {
           success: false,
           message: error.message || "Failed to log in.",
+        });
+      }
+      return;
+    }
+
+    if (method === "POST" && url === "/api/auth/admin-login") {
+      try {
+        const body = await readJsonBody(req);
+        const loginId = String(body.loginId || "").trim();
+        const password = String(body.password || "").trim();
+
+        if (loginId === adminCredentials.loginId && password === adminCredentials.password) {
+          sendJson(res, 200, {
+            success: true,
+            message: "Admin login successful.",
+            user: {
+              loginId: adminCredentials.loginId,
+              role: "admin",
+              name: "System Admin",
+            },
+          });
+          return;
+        }
+
+        sendJson(res, 401, {
+          success: false,
+          message: "Invalid admin login credentials.",
+        });
+      } catch (error) {
+        sendJson(res, 500, {
+          success: false,
+          message: error.message || "Failed to log in as admin.",
+        });
+      }
+      return;
+    }
+
+    if (method === "POST" && url === "/api/auth/department-login") {
+      try {
+        const body = await readJsonBody(req);
+        const loginId = String(body.loginId || "").trim();
+        const password = String(body.password || "").trim();
+
+        if (!loginId || !password) {
+          sendJson(res, 400, {
+            success: false,
+            message: "Login ID and password are required.",
+          });
+          return;
+        }
+
+        const user = await repositories.users.findByRoleAndLoginId("department", loginId);
+        if (!user || user.passwordHash !== hashPassword(password)) {
+          sendJson(res, 401, {
+            success: false,
+            message: "Invalid department login credentials.",
+          });
+          return;
+        }
+
+        sendJson(res, 200, {
+          success: true,
+          message: "Department login successful.",
+          user: {
+            id: String(user._id),
+            loginId: user.loginId,
+            role: user.role,
+            name: user.name,
+            divisionName: user.divisionName,
+            sectionName: user.sectionName,
+          },
+        });
+      } catch (error) {
+        sendJson(res, 500, {
+          success: false,
+          message: error.message || "Failed to log in to department portal.",
+        });
+      }
+      return;
+    }
+
+    if (method === "POST" && url === "/api/admin/department-accounts") {
+      try {
+        const body = await readJsonBody(req);
+        const divisionName = String(body.divisionName || "").trim();
+        const sectionName = String(body.sectionName || "").trim();
+        const name = String(body.name || "").trim();
+        const loginId = String(body.loginId || "").trim();
+        const password = String(body.password || "").trim();
+
+        if (!divisionName || !sectionName || !name || !loginId || !password) {
+          sendJson(res, 400, {
+            success: false,
+            message: "Division, section, name, login ID, and password are required.",
+          });
+          return;
+        }
+
+        const existingUser = await repositories.users.findByLoginId(loginId);
+        if (existingUser) {
+          sendJson(res, 409, {
+            success: false,
+            message: "This login ID is already in use.",
+          });
+          return;
+        }
+
+        const userPayload = {
+          role: "department",
+          divisionName,
+          sectionName,
+          name,
+          loginId,
+          passwordHash: hashPassword(password),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        const result = await repositories.users.createUser(userPayload);
+        sendJson(res, 201, {
+          success: true,
+          message: "Department account created successfully.",
+          departmentUser: {
+            id: String(result.insertedId),
+            divisionName,
+            sectionName,
+            name,
+            loginId,
+            role: "department",
+          },
+        });
+      } catch (error) {
+        sendJson(res, 500, {
+          success: false,
+          message: error.message || "Failed to create department account.",
         });
       }
       return;

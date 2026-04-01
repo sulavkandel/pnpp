@@ -1,6 +1,8 @@
 const translations = {
   ne: {
     topbarTitle: "पोखरा महानगरपालिका नागरिक सेवा पोर्टल",
+    departmentLink: "विभाग लगइन",
+    adminLink: "एडमिन लगइन",
     trackComplaint: "गुनासो ट्र्याक गर्नुहोस्",
     govLabel: "नेपाल सरकार",
     siteTitle: "पोखरा महानगरपालिका नागरिक गुनासो पोर्टल",
@@ -28,14 +30,6 @@ const translations = {
     signupSuccess: "दर्ता सफल भयो। यो जानकारी डाटाबेसमा सुरक्षित गरिएको छ।",
     signupExists: "यो मोबाइल नम्बरबाट पहिले नै प्रयोगकर्ता दर्ता भइसकेको छ।",
     signupFailed: "दर्ता गर्न सकिएन। फेरि प्रयास गर्नुहोस्।",
-    officialEyebrow: "विभाग / वडा लगइन",
-    officialTitle: "कार्यालय पहुँच",
-    optionWard: "वडा कार्यालय",
-    optionDepartment: "विभाग",
-    officialLoginButton: "विभाग / वडामा लगइन",
-    adminEyebrow: "एडमिन लगइन",
-    adminTitle: "केन्द्रिय प्रशासन पहुँच",
-    adminLoginButton: "एडमिन प्यानलमा लगइन",
     trackEyebrow: "ट्र्याकिङ",
     trackTitle: "गुनासोको स्थिति हेर्नुहोस्",
     trackField: "गुनासो नम्बर वा मोबाइल नम्बर",
@@ -68,6 +62,8 @@ const translations = {
   },
   en: {
     topbarTitle: "Pokhara Mahanagarpalika Citizen Service Portal",
+    departmentLink: "Department Login",
+    adminLink: "Admin Login",
     trackComplaint: "Track Complaint",
     govLabel: "Government of Nepal",
     siteTitle: "Pokhara Mahanagarpalika Citizen Grievance Portal",
@@ -95,14 +91,6 @@ const translations = {
     signupSuccess: "Registration successful. The information has been saved in the database.",
     signupExists: "A user with this mobile number already exists.",
     signupFailed: "Registration failed. Please try again.",
-    officialEyebrow: "Department / Ward Login",
-    officialTitle: "Official access",
-    optionWard: "Ward Office",
-    optionDepartment: "Department",
-    officialLoginButton: "Login to department / ward",
-    adminEyebrow: "Admin Login",
-    adminTitle: "Central admin access",
-    adminLoginButton: "Login to admin panel",
     trackEyebrow: "Tracking",
     trackTitle: "Check complaint status",
     trackField: "Complaint ID or mobile number",
@@ -137,67 +125,19 @@ const translations = {
 
 const content = {
   ne: {
-    flowCards: [
-      ["०१", "समस्याको प्रकार छान्नुहोस्", "सडक, फोहोर, पानी, ढल, बत्ती जस्ता मुख्य श्रेणी छान्नुहोस्।"],
-      ["०२", "विशिष्ट समस्या छान्नुहोस्", "उप-श्रेणी छानेपछि सही विभाग वा वडा पहिचान गर्न सजिलो हुन्छ।"],
-      ["०३", "स्थान दिनुहोस्", "अटो GPS वा वडा नम्बर, क्षेत्र, र नजिकको ल्यान्डमार्क प्रयोग गर्नुहोस्।"],
-      ["०४", "फोटो / भिडियो अपलोड", "प्रमाणका लागि धेरै फोटो वा भिडियो थप्न सकिन्छ।"],
-      ["०५", "विस्तृत विवरण लेख्नुहोस्", "समस्याको स्पष्ट व्याख्या लेख्नुहोस्।"],
-      ["०६", "जरुरीपन छान्नुहोस्", "उच्च, मध्यम, वा न्यून प्राथमिकता राख्नुहोस्।"],
-      ["०७", "सम्पर्क विवरण थप्ने?", "नाम, फोन, र इमेल वैकल्पिक रूपमा दिन सकिन्छ।"],
-      ["०८", "गोप्य रूपमा पठाउने?", "हो / होइन छान्नुहोस्।"],
-      ["०९", "पुष्टि गरी पेश गर्नुहोस्", "सबै जानकारी जाँचेर गुनासो पठाउनुहोस्।"],
-    ],
-    timeline: [
-      ["पेश गरिएको", "गुनासो सफलतापूर्वक दर्ता भयो।"],
-      ["प्राप्त", "जिम्मेवार कार्यालयले गुनासो प्राप्त गर्‍यो।"],
-      ["कार्य प्रगतिमा", "गुनासोमा काम भइरहेको छ।"],
-      ["समाधान", "गुनासो समाधान गरिएको छ।"],
-    ],
-    wizardTitle: "गुनासो प्रक्रियाको सारांश",
-    wizardBody: "नागरिकले तलका चरणहरू पूरा गरेपछि मात्र अन्तिम रूपमा गुनासो पठाउँछन्।",
-    wizardSummary: [
-      "समस्या प्रकार: सडक, फोहोर, पानी, आदि",
-      "उप-श्रेणी: विशिष्ट समस्या",
-      "स्थान: GPS वा वडा, क्षेत्र, ल्यान्डमार्क",
-      "फोटो / भिडियो अपलोड",
-      "विस्तृत विवरण",
-      "जरुरीपन: उच्च / मध्यम / न्यून",
-      "सम्पर्क विवरण: वैकल्पिक",
-      "गोप्य गुनासो: हो / होइन",
-      "अन्तिम पुष्टि र पेश",
-    ],
-  },
-  en: {
-    flowCards: [
-      ["01", "Select the problem type", "Choose a main category such as road, garbage, water, drainage, or streetlight."],
-      ["02", "Choose the specific issue", "Selecting a sub-category helps identify the right department or ward."],
-      ["03", "Provide the location", "Use auto GPS or select ward number, area name, and nearest landmark."],
-      ["04", "Upload photo / video", "Users can attach multiple images or videos as evidence."],
-      ["05", "Write a detailed description", "Explain the problem clearly for faster action."],
-      ["06", "Select urgency", "Mark the issue as high, medium, or low priority."],
-      ["07", "Add contact details?", "Name, phone, and email can be added optionally."],
-      ["08", "Submit anonymously?", "Choose yes or no."],
-      ["09", "Confirm and submit", "Review everything and submit the complaint."],
-    ],
     timeline: [
       ["Submitted", "The complaint has been registered successfully."],
       ["Received", "The responsible office received the complaint."],
       ["In Progress", "Work is ongoing on the complaint."],
       ["Resolved", "The complaint has been resolved."],
     ],
-    wizardTitle: "Complaint flow summary",
-    wizardBody: "Citizens complete the following steps before final submission.",
-    wizardSummary: [
-      "Problem type: road, garbage, water, etc.",
-      "Sub-category: specific issue",
-      "Location: GPS or ward, area, landmark",
-      "Photo / video upload",
-      "Detailed description",
-      "Urgency: high / medium / low",
-      "Contact details: optional",
-      "Anonymous complaint: yes / no",
-      "Final confirmation and submit",
+  },
+  en: {
+    timeline: [
+      ["Submitted", "The complaint has been registered successfully."],
+      ["Received", "The responsible office received the complaint."],
+      ["In Progress", "Work is ongoing on the complaint."],
+      ["Resolved", "The complaint has been resolved."],
     ],
   },
 };
@@ -233,22 +173,6 @@ function renderDynamic() {
   const data = content[currentLanguage];
 
   fillGrid(
-    "flow-cards",
-    data.flowCards,
-    ([step, title, copy]) => `
-      <article class="flow-card">
-        <div class="flow-card-header">
-          <div class="flow-step">${step}</div>
-          <div>
-            <h3>${title}</h3>
-            <p>${copy}</p>
-          </div>
-        </div>
-      </article>
-    `,
-  );
-
-  fillGrid(
     "tracking-timeline",
     data.timeline,
     ([title, copy]) => `
@@ -261,15 +185,6 @@ function renderDynamic() {
       </article>
     `,
   );
-
-  const summary = document.getElementById("wizard-summary");
-  if (summary) {
-    summary.innerHTML = `
-      <strong>${data.wizardTitle}</strong>
-      <p>${data.wizardBody}</p>
-      <ul>${data.wizardSummary.map((item) => `<li>${item}</li>`).join("")}</ul>
-    `;
-  }
 }
 
 function renderAll() {
@@ -281,12 +196,10 @@ renderAll();
 
 const citizenLoginForm = document.getElementById("citizen-login-form");
 const citizenLoginMessage = document.getElementById("citizen-login-message");
-const citizenPortalSection = document.getElementById("citizen-portal");
-const citizenPortalBanner = document.getElementById("citizen-portal-banner");
 const signupForm = document.getElementById("signup-form");
 const signupMessage = document.getElementById("signup-message");
 
-if (citizenLoginForm && citizenLoginMessage && citizenPortalSection && citizenPortalBanner) {
+if (citizenLoginForm && citizenLoginMessage) {
   citizenLoginForm.addEventListener("submit", async (event) => {
     event.preventDefault();
   });
@@ -319,11 +232,10 @@ if (citizenLoginForm && citizenLoginMessage && citizenPortalSection && citizenPo
         return;
       }
 
+      sessionStorage.setItem("citizen_user", JSON.stringify(result.user));
       citizenLoginMessage.classList.add("success");
       citizenLoginMessage.textContent = translations[currentLanguage].citizenLoginSuccess;
-      citizenPortalSection.classList.add("visible");
-      citizenPortalBanner.textContent = translations[currentLanguage].portalWelcome.replace("{name}", result.user.name);
-      citizenPortalSection.scrollIntoView({ behavior: "smooth" });
+      window.location.href = "./citizen-portal.html";
     } catch (error) {
       citizenLoginMessage.classList.add("error");
       citizenLoginMessage.textContent = translations[currentLanguage].citizenLoginFailed;
@@ -386,8 +298,6 @@ document.querySelectorAll("[data-lang]").forEach((button) => {
 document.querySelectorAll(".role-switch").forEach((button) => {
   button.addEventListener("click", () => {
     const role = button.dataset.role;
-    if (role !== "citizen") {
-      document.getElementById("track")?.scrollIntoView({ behavior: "smooth" });
-    }
+    if (role !== "citizen") return;
   });
 });

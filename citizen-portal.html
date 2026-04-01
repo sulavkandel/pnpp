@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ne">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Protected citizen complaint portal." />
+    <title>Citizen Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./frontend/src/styles/main.css" />
+    <script type="module" src="./frontend/src/scripts/citizen-portal.js"></script>
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="container topbar-inner">
+        <div class="topbar-brand" id="portal-top-title">पोखरा महानगरपालिका नागरिक पोर्टल</div>
+        <div class="topbar-meta">
+          <div class="lang-switch">
+            <button type="button" class="lang-chip active" data-lang="ne">नेपाली</button>
+            <button type="button" class="lang-chip" data-lang="en">English</button>
+          </div>
+          <button type="button" class="button secondary compact-button" id="logout-button">लगआउट</button>
+        </div>
+      </div>
+    </div>
+
+    <header class="portal-header">
+      <div class="container masthead-inner">
+        <div class="brand">
+          <div class="brand-mark crest">नेपाल</div>
+          <div>
+            <p class="eyebrow small" id="portal-gov-label">नेपाल सरकार</p>
+            <h1 class="font-devanagari" id="portal-main-title">नागरिक गुनासो फाराम</h1>
+            <p class="brand-subtitle" id="portal-subtitle">Protected complaint submission page</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="section">
+        <div class="container">
+          <div class="login-banner" id="welcome-banner"></div>
+
+          <div class="grid two-col">
+            <div class="stack" id="flow-cards"></div>
+
+            <div class="panel form-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow small" id="wizard-eyebrow">गुनासो फाराम</p>
+                  <h3 id="wizard-title">चरणगत गुनासो विवरण</h3>
+                </div>
+                <div class="wizard-step" id="wizard-step">चरण १ / ९</div>
+              </div>
+
+              <form class="auth-form complaint-form-grid">
+                <label>
+                  <span id="field-category">तपाईं कुन प्रकारको समस्या भोगिरहनुभएको छ?</span>
+                  <select>
+                    <option id="opt-road">सडक</option>
+                    <option id="opt-garbage">फोहोर</option>
+                    <option id="opt-water">पानी</option>
+                    <option id="opt-drainage">ढल</option>
+                    <option id="opt-light">बत्ती</option>
+                    <option id="opt-other">अन्य</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span id="field-subcategory">विशिष्ट समस्या</span>
+                  <input type="text" id="input-subcategory" placeholder="उप-श्रेणी लेख्नुहोस्" />
+                </label>
+
+                <label>
+                  <span id="field-location">स्थान</span>
+                  <input type="text" id="input-location" placeholder="GPS वा वडा, क्षेत्र, ल्यान्डमार्क" />
+                </label>
+
+                <label>
+                  <span id="field-media">फोटो / भिडियो अपलोड</span>
+                  <input type="file" multiple />
+                </label>
+
+                <label>
+                  <span id="field-description">समस्याको विवरण</span>
+                  <textarea id="input-description" placeholder="समस्याको विस्तृत विवरण लेख्नुहोस्"></textarea>
+                </label>
+
+                <label>
+                  <span id="field-urgency">जरुरीपन</span>
+                  <select>
+                    <option id="urgency-high">उच्च</option>
+                    <option id="urgency-medium">मध्यम</option>
+                    <option id="urgency-low">न्यून</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span id="field-contact">सम्पर्क विवरण</span>
+                  <input type="text" id="input-contact" placeholder="नाम, फोन, इमेल" />
+                </label>
+
+                <label>
+                  <span id="field-anonymous">गोप्य रूपमा पठाउने?</span>
+                  <select>
+                    <option id="anonymous-no">होइन</option>
+                    <option id="anonymous-yes">हो</option>
+                  </select>
+                </label>
+
+                <button type="button" class="button block primary" id="submit-complaint-button">पुष्टि गरेर पेश गर्नुहोस्</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <button class="chatbot-fab" type="button" aria-label="Open chatbot">💬</button>
+    </main>
+  </body>
+</html>

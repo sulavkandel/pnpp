@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="ne">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Pokhara Mahanagarpalika citizen grievance portal and management system."
+    />
+    <title>Pokhara Mahanagarpalika Citizen Portal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./frontend/src/styles/main.css" />
+    <script type="module" src="./frontend/src/scripts/main.js"></script>
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="container topbar-inner">
+        <div class="topbar-brand" data-i18n="topbarTitle">पोखरा महानगरपालिका नागरिक सेवा पोर्टल</div>
+        <div class="topbar-meta">
+          <a href="#track" class="track-link" data-i18n="trackComplaint">गुनासो ट्र्याक गर्नुहोस्</a>
+          <div class="lang-switch">
+            <button type="button" class="lang-chip active" data-lang="ne">नेपाली</button>
+            <button type="button" class="lang-chip" data-lang="en">English</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <header class="portal-header">
+      <div class="container masthead-inner">
+        <div class="brand">
+          <div class="brand-mark crest">नेपाल</div>
+          <div>
+            <p class="eyebrow small" data-i18n="govLabel">नेपाल सरकार</p>
+            <h1 class="font-devanagari" data-i18n="siteTitle">पोखरा महानगरपालिका नागरिक गुनासो पोर्टल</h1>
+            <p class="brand-subtitle" data-i18n="siteSubtitle">Citizen, Ward, Department and Admin Access</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero-simple">
+        <div class="container hero-simple-grid">
+          <div class="hero-copy">
+            <div class="pill" data-i18n="heroPill">सजिलो गुनासो दर्ता तथा ट्र्याकिङ</div>
+            <h2 data-i18n="heroTitle">लगइन गर्नुहोस्, गुनासो दर्ता गर्नुहोस्, र स्थिति ट्र्याक गर्नुहोस्।</h2>
+            <p data-i18n="heroBody">
+              नागरिकका लागि मोबाइल नम्बर र पासवर्ड, नयाँ प्रयोगकर्ताका लागि साइन अप, विभाग/वडा लगइन, र एडमिन लगइन एउटै पृष्ठमा
+              उपलब्ध छ।
+            </p>
+          </div>
+
+          <div class="hero-art-card">
+            <div class="people-art">
+              <div class="speech s1"></div>
+              <div class="speech s2"></div>
+              <div class="speech s3"></div>
+              <div class="speech s4"></div>
+              <div class="citizen-group">
+                <span class="person p1"></span>
+                <span class="person p2"></span>
+                <span class="person p3"></span>
+                <span class="person p4"></span>
+                <span class="person p5"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="login-hub">
+        <div class="container">
+          <div class="section-intro compact">
+            <span class="eyebrow" data-i18n="loginHubEyebrow">लगइन</span>
+            <h2 data-i18n="loginHubTitle">पहिलो पृष्ठमा सबै प्रकारका लगइन विकल्पहरू।</h2>
+          </div>
+
+          <div class="portal-grid">
+            <div class="panel auth-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow small" data-i18n="citizenLoginEyebrow">नागरिक लगइन</p>
+                  <h3 data-i18n="citizenLoginTitle">मोबाइल नम्बर र पासवर्ड</h3>
+                </div>
+              </div>
+              <form class="auth-form" id="citizen-login-form">
+                <label>
+                  <span data-i18n="fieldMobile">मोबाइल नम्बर</span>
+                  <input type="text" name="mobileNumber" data-i18n-placeholder="placeholderMobile" placeholder="98XXXXXXXX" />
+                </label>
+                <label>
+                  <span data-i18n="fieldPassword">पासवर्ड</span>
+                  <input type="password" name="password" data-i18n-placeholder="placeholderPassword" placeholder="पासवर्ड प्रविष्ट गर्नुहोस्" />
+                </label>
+                <button type="button" class="button block primary role-switch" data-role="citizen">
+                  <span data-i18n="citizenLoginButton">नागरिक पोर्टलमा लगइन</span>
+                </button>
+              </form>
+              <div class="form-message" id="citizen-login-message"></div>
+            </div>
+
+            <div class="panel auth-panel" id="signup-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow small" data-i18n="signupEyebrow">साइन अप</p>
+                  <h3 data-i18n="signupTitle">नयाँ प्रयोगकर्ता दर्ता</h3>
+                </div>
+              </div>
+              <form class="auth-form" id="signup-form">
+                <label>
+                  <span data-i18n="fieldName">पूरा नाम</span>
+                  <input type="text" name="name" data-i18n-placeholder="placeholderName" placeholder="नागरिकको नाम" />
+                </label>
+                <label>
+                  <span data-i18n="fieldMobile">मोबाइल नम्बर</span>
+                  <input type="text" name="mobileNumber" data-i18n-placeholder="placeholderMobile" placeholder="98XXXXXXXX" />
+                </label>
+                <label>
+                  <span data-i18n="fieldPassword">पासवर्ड</span>
+                  <input type="password" name="password" data-i18n-placeholder="placeholderCreatePassword" placeholder="पासवर्ड बनाउनुहोस्" />
+                </label>
+                <button type="button" class="button block secondary">
+                  <span data-i18n="signupButton">दर्ता गर्नुहोस्</span>
+                </button>
+              </form>
+              <div class="form-message" id="signup-message"></div>
+            </div>
+
+            <div class="panel auth-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow small" data-i18n="officialEyebrow">विभाग / वडा लगइन</p>
+                  <h3 data-i18n="officialTitle">कार्यालय पहुँच</h3>
+                </div>
+              </div>
+              <form class="auth-form">
+                <label>
+                  <span data-i18n="fieldSelectPortal">पोर्टल छान्नुहोस्</span>
+                  <select>
+                    <option data-i18n="optionWard">वडा कार्यालय</option>
+                    <option data-i18n="optionDepartment">विभाग</option>
+                  </select>
+                </label>
+                <label>
+                  <span data-i18n="fieldOfficeLogin">कार्यालय आईडी / युजरनेम</span>
+                  <input type="text" data-i18n-placeholder="placeholderOfficeLogin" placeholder="कार्यालय लगइन" />
+                </label>
+                <label>
+                  <span data-i18n="fieldPassword">पासवर्ड</span>
+                  <input type="password" data-i18n-placeholder="placeholderPassword" placeholder="पासवर्ड प्रविष्ट गर्नुहोस्" />
+                </label>
+                <button type="button" class="button block secondary role-switch" data-role="official">
+                  <span data-i18n="officialLoginButton">विभाग / वडामा लगइन</span>
+                </button>
+              </form>
+            </div>
+
+            <div class="panel auth-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow small" data-i18n="adminEyebrow">एडमिन लगइन</p>
+                  <h3 data-i18n="adminTitle">केन्द्रिय प्रशासन पहुँच</h3>
+                </div>
+              </div>
+              <form class="auth-form">
+                <label>
+                  <span data-i18n="fieldAdminUsername">एडमिन युजरनेम</span>
+                  <input type="text" data-i18n-placeholder="placeholderAdmin" placeholder="Admin username" />
+                </label>
+                <label>
+                  <span data-i18n="fieldPassword">पासवर्ड</span>
+                  <input type="password" data-i18n-placeholder="placeholderPassword" placeholder="पासवर्ड प्रविष्ट गर्नुहोस्" />
+                </label>
+                <button type="button" class="button block dark role-switch" data-role="admin">
+                  <span data-i18n="adminLoginButton">एडमिन प्यानलमा लगइन</span>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section-white" id="track">
+        <div class="container">
+          <div class="section-intro compact">
+            <span class="eyebrow" data-i18n="trackEyebrow">ट्र्याकिङ</span>
+            <h2 data-i18n="trackTitle">गुनासोको स्थिति हेर्नुहोस्</h2>
+          </div>
+
+          <div class="track-card simple-track">
+            <div class="track-search">
+              <label>
+                <span data-i18n="trackField">गुनासो नम्बर वा मोबाइल नम्बर</span>
+                <input type="text" data-i18n-placeholder="placeholderTrack" placeholder="PMC-2026-001245 वा 98XXXXXXXX" />
+              </label>
+              <button type="button" class="button primary" data-i18n="trackNow">ट्र्याक गर्नुहोस्</button>
+            </div>
+            <div class="track-result">
+              <div class="track-pill" data-i18n="trackStatus">हालको स्थिति: कार्य प्रगतिमा</div>
+              <div class="dark-card">
+                <p class="eyebrow small light" data-i18n="timelineEyebrow">समयरेखा</p>
+                <div class="timeline" id="tracking-timeline"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section hidden-section" id="citizen-portal">
+        <div class="container">
+          <div class="section-intro compact">
+            <span class="eyebrow" data-i18n="portalEyebrow">नागरिक पोर्टल</span>
+            <h2 data-i18n="portalTitle">लगइनपछि चरणगत गुनासो प्रवाह</h2>
+            <p data-i18n="portalBody">
+              प्रयोगकर्ताले समस्या प्रकार, उप-श्रेणी, स्थान, फोटो/भिडियो, विवरण, प्राथमिकता, सम्पर्क, गोपनीयता, र पुष्टि सहित
+              गुनासो पठाउँछन्।
+            </p>
+          </div>
+          <div class="login-banner" id="citizen-portal-banner"></div>
+
+          <div class="grid two-col">
+            <div class="stack" id="flow-cards"></div>
+
+            <div class="panel form-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow small" data-i18n="wizardEyebrow">गुनासो विजार्ड</p>
+                  <h3 data-i18n="wizardTitle">गुनासो पेश गर्ने प्रक्रिया</h3>
+                </div>
+                <div class="wizard-step" data-i18n="wizardStep">चरण १ / ९</div>
+              </div>
+
+              <div class="question-card">
+                <span class="question-label" data-i18n="currentQuestionLabel">हालको प्रश्न</span>
+                <h4 data-i18n="currentQuestionTitle">तपाईं कुन प्रकारको समस्या भोगिरहनुभएको छ?</h4>
+                <div class="choice-grid">
+                  <button type="button" data-i18n="choiceRoad">सडक</button>
+                  <button type="button" data-i18n="choiceGarbage">फोहोर</button>
+                  <button type="button" data-i18n="choiceWater">पानी</button>
+                  <button type="button" data-i18n="choiceDrainage">ढल</button>
+                  <button type="button" data-i18n="choiceStreetlight">बत्ती</button>
+                  <button type="button" data-i18n="choiceOther">अन्य</button>
+                </div>
+              </div>
+
+              <div class="wizard-summary" id="wizard-summary"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <button class="chatbot-fab" type="button" aria-label="Open chatbot">💬</button>
+    </main>
+  </body>
+</html>

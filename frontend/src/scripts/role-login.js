@@ -3,13 +3,13 @@ const pageRole = document.body.dataset.rolePage;
 const translations = {
   department: {
     ne: {
-      title: "विभाग / वडा लगइन",
+      title: "अधिकृत लगइन",
       back: "नागरिक लगइनमा फर्कनुहोस्",
       gov: "नेपाल सरकार",
-      heading: "विभाग तथा वडा कार्यालय लगइन",
-      subtitle: "Department and ward access page",
-      eyebrow: "कार्यालय लगइन",
-      formTitle: "विभाग / वडा पोर्टल पहुँच",
+      heading: "विभागीय अधिकृत पोर्टल लगइन",
+      subtitle: "Officer access page",
+      eyebrow: "अधिकृत लगइन",
+      formTitle: "साप्ताहिक ड्यूटीमा रहेका अधिकृत मात्र",
       portalLabel: "पोर्टल छान्नुहोस्",
       divisionLabel: "महाशाखा छान्नुहोस्",
       sectionLabel: "साखा / युनिट छान्नुहोस्",
@@ -20,18 +20,20 @@ const translations = {
       userPlaceholder: "कार्यालय लगइन",
       passwordLabel: "पासवर्ड",
       passwordPlaceholder: "पासवर्ड प्रविष्ट गर्नुहोस्",
-      button: "विभाग / वडामा लगइन",
-      success: "विभाग लगइन सफल भयो।",
-      failed: "विभाग लगइन विवरण मिलेन।",
+      forgot: "पासवर्ड बिर्सनुभयो?",
+      button: "अधिकृत पोर्टलमा लगइन",
+      departmentSuccess: "अधिकृत लगइन सफल भयो।",
+      wardSuccess: "अधिकृत लगइन सफल भयो।",
+      failed: "अधिकृत लगइन विवरण मिलेन।",
     },
     en: {
-      title: "Department / Ward Login",
+      title: "Officer Login",
       back: "Back to citizen login",
       gov: "Government of Nepal",
-      heading: "Department and Ward Office Login",
-      subtitle: "Department and ward access page",
-      eyebrow: "Official login",
-      formTitle: "Department / Ward portal access",
+      heading: "Department Officer Portal Login",
+      subtitle: "Officer access page",
+      eyebrow: "Officer login",
+      formTitle: "Only officers on active weekly duty can sign in",
       portalLabel: "Select portal",
       divisionLabel: "Select division",
       sectionLabel: "Select section / unit",
@@ -42,9 +44,11 @@ const translations = {
       userPlaceholder: "Office login",
       passwordLabel: "Password",
       passwordPlaceholder: "Enter password",
-      button: "Login to department / ward",
-      success: "Department login successful.",
-      failed: "Invalid department login details.",
+      forgot: "Forgot password?",
+      button: "Login to officer portal",
+      departmentSuccess: "Officer login successful.",
+      wardSuccess: "Officer login successful.",
+      failed: "Invalid officer login details.",
     },
   },
   admin: {
@@ -127,9 +131,10 @@ function renderDepartmentSelectors() {
   sectionSelect.innerHTML = activeDivision.sections.map((section) => `<option value="${section}">${section}</option>`).join("");
   wardSelect.innerHTML = wards.map((ward) => `<option value="Ward ${ward}">${currentLanguage === "ne" ? `वडा ${ward}` : `Ward ${ward}`}</option>`).join("");
 
-  const wardOnly = portalSelect.selectedIndex === 0;
+  const wardOnly = portalSelect.value === "ward";
   divisionSelect.disabled = wardOnly;
   sectionSelect.disabled = wardOnly;
+  wardSelect.disabled = !wardOnly;
 }
 
 function render() {
@@ -174,6 +179,16 @@ if (pageRole === "department") {
   });
 }
 
+document.getElementById("forgot-password-link")?.addEventListener("click", (event) => {
+  event.preventDefault();
+  const message = document.getElementById("role-login-message");
+  if (!message) return;
+  message.className = "form-message success";
+  message.textContent = currentLanguage === "ne"
+    ? "पासवर्ड रिसेटका लागि केन्द्रीय एडमिनलाई सम्पर्क गर्नुहोस्।"
+    : "Please contact the central admin to reset your password.";
+});
+
 const loginForm = document.getElementById("role-login-form");
 const loginMessage = document.getElementById("role-login-message");
 
@@ -185,7 +200,12 @@ if (loginForm && loginMessage) {
   const loginButton = loginForm.querySelector("button");
   loginButton?.addEventListener("click", async () => {
     const formData = new FormData(loginForm);
+    const officeType = pageRole === "department" ? document.getElementById("portal-select")?.value || "ward" : "";
     const payload = {
+      officeType,
+      divisionName: pageRole === "department" && officeType === "department" ? document.getElementById("division-select")?.value || "" : "",
+      sectionName: pageRole === "department" && officeType === "department" ? document.getElementById("section-select")?.value || "" : "",
+      wardNumber: pageRole === "department" && officeType === "ward" ? String(document.getElementById("ward-select")?.value || "").replace("Ward ", "") : "",
       loginId: String(formData.get("loginId") || "").trim(),
       password: String(formData.get("password") || "").trim(),
     };
@@ -210,15 +230,23 @@ if (loginForm && loginMessage) {
       }
 
       loginMessage.classList.add("success");
-      loginMessage.textContent = translations[pageRole][currentLanguage].success;
 
       if (pageRole === "admin") {
         sessionStorage.setItem("admin_user", JSON.stringify(result.user));
+        sessionStorage.setItem("admin_auth_token", result.token);
+        loginMessage.textContent = translations[pageRole][currentLanguage].success;
         window.location.href = "./admin-panel.html";
         return;
       }
 
+      const successText =
+        payload.officeType === "ward"
+          ? translations[pageRole][currentLanguage].wardSuccess
+          : translations[pageRole][currentLanguage].departmentSuccess;
+
       sessionStorage.setItem("department_user", JSON.stringify(result.user));
+      sessionStorage.setItem("department_auth_token", result.token);
+      loginMessage.textContent = successText;
       window.location.href = "./department-portal.html";
     } catch (error) {
       loginMessage.classList.add("error");

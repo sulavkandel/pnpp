@@ -16,10 +16,15 @@ const translations = {
     citizenLoginEyebrow: "नागरिक लगइन",
     citizenLoginTitle: "मोबाइल नम्बर र पासवर्ड",
     citizenLoginSuccess: "लगइन सफल भयो। नागरिक पोर्टल खुल्यो।",
-    citizenLoginFailed: "मोबाइल नम्बर वा पासवर्ड मिलेन।",
+    citizenLoginFailed: "मोबाइल नम्बर/नागरिक कोड वा पासवर्ड मिलेन।",
+    citizenIdentifierHint: "मोबाइल नम्बर वा CIT कोड प्रयोग गर्नुहोस्।",
+    citizenCodeNotice: "तपाईंको गुमनाम नागरिक कोड: {code}",
     fieldMobile: "मोबाइल नम्बर",
+    fieldCitizenIdentifier: "मोबाइल नम्बर वा नागरिक कोड",
     fieldPassword: "पासवर्ड",
     fieldName: "पूरा नाम",
+    fieldEmail: "इमेल",
+    fieldRegisterAnonymous: "गुमनाम रूपमा दर्ता गर्ने",
     fieldSelectPortal: "पोर्टल छान्नुहोस्",
     fieldOfficeLogin: "कार्यालय आईडी / युजरनेम",
     fieldAdminUsername: "एडमिन युजरनेम",
@@ -27,7 +32,7 @@ const translations = {
     signupEyebrow: "साइन अप",
     signupTitle: "नयाँ प्रयोगकर्ता दर्ता",
     signupButton: "दर्ता गर्नुहोस्",
-    signupSuccess: "दर्ता सफल भयो। यो जानकारी डाटाबेसमा सुरक्षित गरिएको छ।",
+    signupSuccess: "दर्ता सफल भयो। तपाईंलाई ड्यासबोर्डमा लगइन गरियो।",
     signupExists: "यो मोबाइल नम्बरबाट पहिले नै प्रयोगकर्ता दर्ता भइसकेको छ।",
     signupFailed: "दर्ता गर्न सकिएन। फेरि प्रयास गर्नुहोस्।",
     trackEyebrow: "ट्र्याकिङ",
@@ -35,6 +40,7 @@ const translations = {
     trackField: "गुनासो नम्बर वा मोबाइल नम्बर",
     trackNow: "ट्र्याक गर्नुहोस्",
     trackStatus: "हालको स्थिति: कार्य प्रगतिमा",
+    trackNotFound: "गुनासो भेटिएन।",
     timelineEyebrow: "समयरेखा",
     portalEyebrow: "नागरिक पोर्टल",
     portalTitle: "लगइनपछि चरणगत गुनासो प्रवाह",
@@ -53,8 +59,10 @@ const translations = {
     choiceStreetlight: "बत्ती",
     choiceOther: "अन्य",
     placeholderMobile: "98XXXXXXXX",
+    placeholderCitizenIdentifier: "98XXXXXXXX वा CIT-1234",
     placeholderPassword: "पासवर्ड प्रविष्ट गर्नुहोस्",
     placeholderName: "नागरिकको नाम",
+    placeholderEmail: "example@email.com",
     placeholderCreatePassword: "पासवर्ड बनाउनुहोस्",
     placeholderOfficeLogin: "कार्यालय लगइन",
     placeholderAdmin: "Admin username",
@@ -77,10 +85,15 @@ const translations = {
     citizenLoginEyebrow: "Citizen Login",
     citizenLoginTitle: "Mobile number and password",
     citizenLoginSuccess: "Login successful. The citizen portal is now open.",
-    citizenLoginFailed: "Invalid mobile number or password.",
+    citizenLoginFailed: "Invalid mobile number / citizen ID or password.",
+    citizenIdentifierHint: "Use your mobile number or CIT code.",
+    citizenCodeNotice: "Your anonymous citizen ID: {code}",
     fieldMobile: "Mobile number",
+    fieldCitizenIdentifier: "Mobile number or Citizen ID",
     fieldPassword: "Password",
     fieldName: "Full name",
+    fieldEmail: "Email",
+    fieldRegisterAnonymous: "Register anonymously",
     fieldSelectPortal: "Select portal",
     fieldOfficeLogin: "Office ID / username",
     fieldAdminUsername: "Admin username",
@@ -88,7 +101,7 @@ const translations = {
     signupEyebrow: "Sign Up",
     signupTitle: "New user registration",
     signupButton: "Register",
-    signupSuccess: "Registration successful. The information has been saved in the database.",
+    signupSuccess: "Registration successful. You are now logged in and redirected to the dashboard.",
     signupExists: "A user with this mobile number already exists.",
     signupFailed: "Registration failed. Please try again.",
     trackEyebrow: "Tracking",
@@ -96,6 +109,7 @@ const translations = {
     trackField: "Complaint ID or mobile number",
     trackNow: "Track now",
     trackStatus: "Current status: In Progress",
+    trackNotFound: "Complaint not found.",
     timelineEyebrow: "Timeline",
     portalEyebrow: "Citizen Portal",
     portalTitle: "Question flow after login",
@@ -114,8 +128,10 @@ const translations = {
     choiceStreetlight: "Streetlight",
     choiceOther: "Other",
     placeholderMobile: "98XXXXXXXX",
+    placeholderCitizenIdentifier: "98XXXXXXXX or CIT-1234",
     placeholderPassword: "Enter password",
     placeholderName: "Citizen name",
+    placeholderEmail: "example@email.com",
     placeholderCreatePassword: "Create password",
     placeholderOfficeLogin: "Office login",
     placeholderAdmin: "Admin username",
@@ -187,6 +203,22 @@ function renderDynamic() {
   );
 }
 
+function renderTrackingTimeline(entries = content[currentLanguage].timeline) {
+  fillGrid(
+    "tracking-timeline",
+    entries,
+    ([title, copy]) => `
+      <article class="timeline-item">
+        <div class="timeline-dot"></div>
+        <div class="timeline-copy">
+          <strong>${title}</strong>
+          <p>${copy}</p>
+        </div>
+      </article>
+    `,
+  );
+}
+
 function renderAll() {
   translateStatic();
   renderDynamic();
@@ -208,7 +240,7 @@ if (citizenLoginForm && citizenLoginMessage) {
   loginButton?.addEventListener("click", async () => {
     const formData = new FormData(citizenLoginForm);
     const payload = {
-      mobileNumber: String(formData.get("mobileNumber") || "").trim(),
+      identifier: String(formData.get("identifier") || "").trim(),
       password: String(formData.get("password") || "").trim(),
     };
 
@@ -233,6 +265,7 @@ if (citizenLoginForm && citizenLoginMessage) {
       }
 
       sessionStorage.setItem("citizen_user", JSON.stringify(result.user));
+      sessionStorage.setItem("citizen_auth_token", result.token);
       citizenLoginMessage.classList.add("success");
       citizenLoginMessage.textContent = translations[currentLanguage].citizenLoginSuccess;
       window.location.href = "./citizen-portal.html";
@@ -254,7 +287,9 @@ if (signupForm && signupMessage) {
     const payload = {
       name: String(formData.get("name") || "").trim(),
       mobileNumber: String(formData.get("mobileNumber") || "").trim(),
+      email: String(formData.get("email") || "").trim(),
       password: String(formData.get("password") || "").trim(),
+      registerAnonymously: formData.get("registerAnonymously") === "on",
     };
 
     signupMessage.className = "form-message";
@@ -273,8 +308,17 @@ if (signupForm && signupMessage) {
 
       if (response.ok) {
         signupMessage.classList.add("success");
-        signupMessage.textContent = translations[currentLanguage].signupSuccess;
+        sessionStorage.setItem("citizen_user", JSON.stringify(result.user));
+        sessionStorage.setItem("citizen_auth_token", result.token);
+        const anonymousCodeText = result.anonymousCitizenCode
+          ? ` ${translations[currentLanguage].citizenCodeNotice.replace("{code}", result.anonymousCitizenCode)}`
+          : "";
+        if (result.anonymousCitizenCode) {
+          sessionStorage.setItem("citizen_registration_notice", result.anonymousCitizenCode);
+        }
+        signupMessage.textContent = `${translations[currentLanguage].signupSuccess}${anonymousCodeText}`;
         signupForm.reset();
+        window.location.href = "./citizen-portal.html";
         return;
       }
 
@@ -293,6 +337,48 @@ document.querySelectorAll("[data-lang]").forEach((button) => {
     currentLanguage = button.dataset.lang;
     renderAll();
   });
+});
+
+const trackButton = document.getElementById("track-complaint-button");
+const trackInput = document.getElementById("track-query-input");
+const trackMessage = document.getElementById("track-message");
+const trackStatusPill = document.getElementById("track-status-pill");
+
+trackButton?.addEventListener("click", async () => {
+  const query = String(trackInput?.value || "").trim();
+  trackMessage.className = "form-message";
+  trackMessage.textContent = "";
+
+  if (!query) {
+    trackMessage.classList.add("error");
+    trackMessage.textContent = translations[currentLanguage].trackNotFound;
+    return;
+  }
+
+  try {
+    const response = await fetch(`http://localhost:4000/api/complaints/track?query=${encodeURIComponent(query)}`);
+    const result = await response.json();
+
+    if (!response.ok) {
+      trackMessage.classList.add("error");
+      trackMessage.textContent = result.message || translations[currentLanguage].trackNotFound;
+      renderTrackingTimeline();
+      return;
+    }
+
+    const complaint = result.complaint;
+    if (trackStatusPill) {
+      trackStatusPill.textContent = `${translations[currentLanguage].trackStatus.split(":")[0]}: ${complaint.status}`;
+    }
+
+    const historyEntries = (complaint.history || []).map((entry) => [entry.action, entry.note || entry.message || ""]);
+    renderTrackingTimeline(historyEntries.length ? historyEntries : content[currentLanguage].timeline);
+    trackMessage.classList.add("success");
+    trackMessage.textContent = complaint.tokenNumber;
+  } catch (error) {
+    trackMessage.classList.add("error");
+    trackMessage.textContent = translations[currentLanguage].trackNotFound;
+  }
 });
 
 document.querySelectorAll(".role-switch").forEach((button) => {

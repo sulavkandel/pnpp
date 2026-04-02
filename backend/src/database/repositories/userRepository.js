@@ -1,3 +1,4 @@
+import { ObjectId } from "mongodb";
 import { collectionNames, getCollection } from "../collections.js";
 
 export function getUserRepository() {
@@ -7,6 +8,9 @@ export function getUserRepository() {
     collection,
     findByMobileNumber(mobileNumber) {
       return collection.findOne({ mobileNumber });
+    },
+    findByCitizenCode(citizenCode) {
+      return collection.findOne({ citizenCode });
     },
     findByLoginId(loginId) {
       return collection.findOne({ loginId });
@@ -21,7 +25,18 @@ export function getUserRepository() {
       return collection.insertOne(user);
     },
     findById(id) {
-      return collection.findOne({ _id: id });
+      return collection.findOne({ _id: new ObjectId(id) });
+    },
+    updateUser(id, patch) {
+      return collection.updateOne(
+        { _id: new ObjectId(id) },
+        {
+          $set: {
+            ...patch,
+            updatedAt: new Date(),
+          },
+        },
+      );
     },
   };
 }

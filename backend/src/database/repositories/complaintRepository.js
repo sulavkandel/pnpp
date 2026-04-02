@@ -1,3 +1,4 @@
+import { ObjectId } from "mongodb";
 import { collectionNames, getCollection } from "../collections.js";
 
 export function getComplaintRepository() {
@@ -8,22 +9,51 @@ export function getComplaintRepository() {
     collection,
     historyCollection,
     listAll() {
-      return collection.find({}).toArray();
+      return collection.find({}).sort({ createdAt: -1 }).toArray();
     },
-    findByComplaintId(complaintId) {
-      return collection.findOne({ complaintId });
+    findByTokenNumber(tokenNumber) {
+      return collection.findOne({ tokenNumber });
+    },
+    findByCitizenId(citizenId) {
+      return collection.find({ citizenId }).sort({ createdAt: -1 }).toArray();
+    },
+    findAssignedToOfficer(assignedOfficerId) {
+      return collection.find({ assignedOfficerId }).sort({ createdAt: -1 }).toArray();
+    },
+    findById(id) {
+      return collection.findOne({ _id: new ObjectId(id) });
     },
     createComplaint(payload) {
       return collection.insertOne(payload);
     },
-    updateStatus(id, status) {
-      return collection.updateOne({ _id: id }, { $set: { status } });
+    updateComplaint(tokenNumber, patch) {
+      return collection.updateOne(
+        { tokenNumber },
+        {
+          $set: {
+            ...patch,
+            updatedAt: new Date(),
+          },
+        },
+      );
     },
-    forwardComplaint(id, targetDepartment) {
-      return collection.updateOne({ _id: id }, { $set: { currentDepartment: targetDepartment, status: "forwarded" } });
+    async addCommentPointer(tokenNumber, commentSummary) {
+      return collection.updateOne(
+        { tokenNumber },
+        {
+          $set: { updatedAt: new Date() },
+          $push: { latestComments: { $each: [commentSummary], $slice: -5 } },
+        },
+      );
+    },
+    listByFilter(filter = {}) {
+      return collection.find(filter).sort({ createdAt: -1 }).toArray();
     },
     logStatusHistory(entry) {
       return historyCollection.insertOne(entry);
+    },
+    listStatusHistory(tokenNumber) {
+      return historyCollection.find({ complaintToken: tokenNumber }).sort({ createdAt: 1 }).toArray();
     },
   };
 }

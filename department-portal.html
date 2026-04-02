@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Department Portal</title>
+    <title>Officer Portal</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -13,48 +13,202 @@
     <link rel="stylesheet" href="./frontend/src/styles/main.css" />
     <script type="module" src="./frontend/src/scripts/department-portal.js"></script>
   </head>
-  <body>
-    <div class="topbar">
-      <div class="container topbar-inner">
-        <div class="topbar-brand" id="dept-portal-title">विभाग पोर्टल</div>
-        <div class="topbar-meta">
-          <div class="lang-switch">
-            <button type="button" class="lang-chip active" data-lang="ne">नेपाली</button>
-            <button type="button" class="lang-chip" data-lang="en">English</button>
-          </div>
-          <button type="button" class="button secondary compact-button" id="department-logout-button">लगआउट</button>
-        </div>
-      </div>
-    </div>
-
-    <header class="portal-header">
-      <div class="container masthead-inner">
-        <div class="brand">
-          <div class="brand-mark crest">नेपाल</div>
-          <div>
-            <p class="eyebrow small" id="dept-gov-label">नेपाल सरकार</p>
-            <h1 class="font-devanagari" id="dept-main-title">विभागीय ड्यासबोर्ड</h1>
-            <p class="brand-subtitle" id="dept-subtitle">Department portal after successful login</p>
+  <body class="officer-dashboard-body">
+    <div class="officer-shell">
+      <div class="topbar">
+        <div class="container topbar-inner">
+          <div class="topbar-brand" id="officer-top-title">जनसेवा · अधिकृत पोर्टल</div>
+          <div class="topbar-meta">
+            <span class="track-link" id="officer-week-label">साप्ताहिक रोटेसन</span>
+            <div class="lang-switch">
+              <button type="button" class="lang-chip active" data-lang="ne">नेपाली</button>
+              <button type="button" class="lang-chip" data-lang="en">English</button>
+            </div>
+            <button type="button" class="button secondary compact-button" id="department-logout-button">लगआउट</button>
           </div>
         </div>
       </div>
-    </header>
 
-    <main>
-      <section class="section">
-        <div class="container">
-          <div class="login-banner" id="department-welcome-banner"></div>
-          <div class="panel auth-panel">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow small" id="dept-details-eyebrow">विभाग विवरण</p>
-                <h3 id="dept-details-title">लगइन गरिएको विभाग जानकारी</h3>
+      <header class="portal-header citizen-header">
+        <div class="container citizen-header-inner">
+          <div class="brand">
+            <div class="brand-mark crest">नेपाल</div>
+            <div>
+              <p class="eyebrow small" id="dept-gov-label">नेपाल सरकार</p>
+              <h1 class="font-devanagari" id="dept-main-title">Officer Portal</h1>
+              <p class="brand-subtitle" id="dept-subtitle">Department complaint handling and review</p>
+            </div>
+          </div>
+          <div class="citizen-header-profile">
+            <div class="citizen-profile-copy">
+              <strong id="department-officer-name">Officer</strong>
+              <span id="department-officer-office">Department</span>
+            </div>
+            <div class="citizen-profile-avatar" id="department-avatar">OF</div>
+          </div>
+        </div>
+      </header>
+
+      <main class="citizen-main">
+        <div class="container officer-layout">
+          <aside class="officer-sidebar">
+            <div class="officer-alert-banner" id="officer-alert-banner"></div>
+
+            <div class="officer-sidebar-card">
+              <button type="button" class="officer-side-link active" data-tab="new" id="tab-link-new">गुनासो पंक्ति</button>
+              <button type="button" class="officer-side-link" data-tab="accepted" id="tab-link-accepted">मेरो समाधान</button>
+              <button type="button" class="officer-side-link" data-tab="closed" id="tab-link-closed">फर्वार्ड / बन्द</button>
+              <button type="button" class="officer-side-link" data-tab="performance" id="tab-link-performance">मेरो रिपोर्ट</button>
+            </div>
+
+            <div class="officer-sidebar-card">
+              <p class="eyebrow small" id="points-summary-eyebrow">मेरो अंक</p>
+              <div class="officer-points-total" id="officer-points-total">0</div>
+              <p class="citizen-muted-copy" id="officer-points-copy">Performance points</p>
+              <div class="officer-points-mini">
+                <div>
+                  <strong id="officer-solved-mini">0</strong>
+                  <span id="officer-solved-mini-label">समाधान</span>
+                </div>
+                <div>
+                  <strong id="officer-pending-mini">0</strong>
+                  <span id="officer-pending-mini-label">बाँकी</span>
+                </div>
               </div>
             </div>
-            <div class="details-list" id="department-details-list"></div>
-          </div>
+
+            <div class="officer-sidebar-card">
+              <p class="eyebrow small" id="recent-activity-eyebrow">Recent activity</p>
+              <div id="recent-activity-list"></div>
+            </div>
+
+            <div class="officer-sidebar-card">
+              <p class="eyebrow small" id="leaderboard-eyebrow">Points leaderboard</p>
+              <div id="leaderboard-list"></div>
+            </div>
+          </aside>
+
+          <section class="officer-main">
+            <div class="department-kpi-row officer-kpi-row" id="officer-summary-row"></div>
+
+            <div class="officer-tab-bar">
+              <button type="button" class="department-filter-btn active" data-tab="new" id="tab-button-new">New Complaints</button>
+              <button type="button" class="department-filter-btn" data-tab="accepted" id="tab-button-accepted">My Accepted Complaints</button>
+              <button type="button" class="department-filter-btn" data-tab="closed" id="tab-button-closed">Forwarded / Closed</button>
+              <button type="button" class="department-filter-btn" data-tab="performance" id="tab-button-performance">My Performance</button>
+            </div>
+
+            <section class="officer-section active" id="officer-section-new">
+              <div class="officer-list-panel panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small" id="new-complaints-eyebrow">नयाँ गुनासो</p>
+                    <h3 id="new-complaints-title">२४ घण्टाभित्र प्रारम्भिक समीक्षा आवश्यक</h3>
+                  </div>
+                </div>
+                <div id="officer-new-list"></div>
+              </div>
+            </section>
+
+            <section class="officer-section" id="officer-section-accepted">
+              <div class="officer-list-panel panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small" id="accepted-complaints-eyebrow">मेरो स्वीकृत गुनासो</p>
+                    <h3 id="accepted-complaints-title">प्रगतिमा रहेका कार्य</h3>
+                  </div>
+                </div>
+                <div id="officer-accepted-list"></div>
+              </div>
+            </section>
+
+            <section class="officer-section" id="officer-section-closed">
+              <div class="officer-list-panel panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small" id="closed-complaints-eyebrow">फर्वार्ड / बन्द</p>
+                    <h3 id="closed-complaints-title">बन्द गरिएका वा माथि पठाइएका गुनासो</h3>
+                  </div>
+                </div>
+                <div id="officer-closed-list"></div>
+              </div>
+            </section>
+
+            <section class="officer-section" id="officer-section-performance">
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small" id="performance-eyebrow">Officer Performance</p>
+                    <h3 id="performance-title">अंक, इतिहास र साप्ताहिक रिपोर्ट</h3>
+                  </div>
+                  <button type="button" class="button dark" id="download-weekly-report-button">Download Weekly Report</button>
+                </div>
+                <div class="officer-performance-grid">
+                  <div class="detail-card" id="officer-performance-summary"></div>
+                  <div class="detail-card" id="officer-performance-feedback"></div>
+                </div>
+                <div class="details-list top-gap" id="officer-performance-history"></div>
+              </div>
+            </section>
+
+            <div class="panel top-gap">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow small" id="review-eyebrow">Complaint Review</p>
+                  <h3 id="review-title">Review and handle complaint</h3>
+                </div>
+              </div>
+              <div id="officer-selected-complaint"></div>
+              <form class="auth-form top-gap" id="officer-review-form">
+                <label>
+                  <span id="review-status-label">Action</span>
+                  <select id="review-status-select">
+                    <option value="in_progress">Accept</option>
+                    <option value="forward">Forward</option>
+                    <option value="escalate">Escalate</option>
+                    <option value="pending_admin_verification">Mark Invalid</option>
+                    <option value="delayed">Delay</option>
+                    <option value="solved">Close as Resolved</option>
+                  </select>
+                </label>
+                <label>
+                  <span id="review-eta-label">Estimated completion</span>
+                  <input type="datetime-local" id="review-eta-input" />
+                </label>
+                <label>
+                  <span id="review-comment-label">Reason / comment</span>
+                  <textarea id="review-comment-input" placeholder="Explain the action clearly"></textarea>
+                </label>
+                <label>
+                  <span id="review-forward-type-label">Forward target</span>
+                  <select id="review-forward-type-select">
+                    <option value="">No forwarding</option>
+                    <option value="department">Department</option>
+                    <option value="ward">Ward</option>
+                    <option value="central_admin">Central Admin</option>
+                  </select>
+                </label>
+                <label>
+                  <span id="review-forward-division-label">Division</span>
+                  <input type="text" id="review-forward-division-input" placeholder="Target division" />
+                </label>
+                <label>
+                  <span id="review-forward-section-label">Section / unit</span>
+                  <input type="text" id="review-forward-section-input" placeholder="Target section" />
+                </label>
+                <label>
+                  <span id="review-forward-ward-label">Ward number</span>
+                  <input type="text" id="review-forward-ward-input" placeholder="Target ward" />
+                </label>
+                <div class="action-strip">
+                  <button type="button" class="button primary" id="officer-review-submit-button">Submit Review</button>
+                </div>
+                <div class="form-message" id="officer-action-message"></div>
+              </form>
+            </div>
+          </section>
         </div>
-      </section>
-    </main>
+      </main>
+    </div>
   </body>
 </html>

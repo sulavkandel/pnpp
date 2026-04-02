@@ -16,7 +16,7 @@
   <body data-role-page="department">
     <div class="topbar">
       <div class="container topbar-inner">
-        <div class="topbar-brand" data-role-text="title">विभाग / वडा लगइन</div>
+        <div class="topbar-brand" data-role-text="title">अधिकृत लगइन</div>
         <div class="topbar-meta">
           <a href="./index.html" class="track-link" data-role-text="back">नागरिक लगइनमा फर्कनुहोस्</a>
           <div class="lang-switch">
@@ -33,8 +33,8 @@
           <div class="brand-mark crest">नेपाल</div>
           <div>
             <p class="eyebrow small" data-role-text="gov">नेपाल सरकार</p>
-            <h1 class="font-devanagari" data-role-text="heading">विभाग तथा वडा कार्यालय लगइन</h1>
-            <p class="brand-subtitle" data-role-text="subtitle">Department and ward access page</p>
+            <h1 class="font-devanagari" data-role-text="heading">विभागीय अधिकृत पोर्टल लगइन</h1>
+            <p class="brand-subtitle" data-role-text="subtitle">Officer access page</p>
           </div>
         </div>
       </div>
@@ -46,16 +46,16 @@
           <div class="panel auth-panel">
             <div class="panel-header">
               <div>
-                <p class="eyebrow small" data-role-text="eyebrow">कार्यालय लगइन</p>
-                <h3 data-role-text="formTitle">विभाग / वडा पोर्टल पहुँच</h3>
+                <p class="eyebrow small" data-role-text="eyebrow">अधिकृत लगइन</p>
+                <h3 data-role-text="formTitle">साप्ताहिक ड्यूटीमा रहेका अधिकृत मात्र</h3>
               </div>
             </div>
             <form class="auth-form" id="role-login-form">
               <label>
                 <span data-role-text="portalLabel">पोर्टल छान्नुहोस्</span>
                 <select id="portal-select">
-                  <option data-role-text="wardOption">वडा कार्यालय</option>
-                  <option data-role-text="departmentOption">विभाग</option>
+                  <option value="ward" data-role-text="wardOption">वडा कार्यालय</option>
+                  <option value="department" data-role-text="departmentOption">विभाग</option>
                 </select>
               </label>
               <label>
@@ -78,6 +78,7 @@
                 <span data-role-text="passwordLabel">पासवर्ड</span>
                 <input type="password" name="password" data-role-placeholder="passwordPlaceholder" placeholder="पासवर्ड प्रविष्ट गर्नुहोस्" />
               </label>
+              <a href="#" class="track-link" id="forgot-password-link" data-role-text="forgot">पासवर्ड बिर्सनुभयो?</a>
               <button type="button" class="button block secondary" data-role-text="button">विभाग / वडामा लगइन</button>
             </form>
             <div class="form-message" id="role-login-message"></div>

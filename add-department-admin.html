@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ne">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Add Department Admin</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./frontend/src/styles/main.css" />
+    <script type="module" src="./frontend/src/scripts/add-department-admin.js"></script>
+  </head>
+  <body>
+    <div class="topbar">
+      <div class="container topbar-inner">
+        <div class="topbar-brand" id="office-admin-title">विभाग / वडा एडमिन थप्नुहोस्</div>
+        <div class="topbar-meta">
+          <a href="./admin-panel.html" class="track-link" id="back-admin-panel">एडमिन प्यानलमा फर्कनुहोस्</a>
+          <div class="lang-switch">
+            <button type="button" class="lang-chip active" data-lang="ne">नेपाली</button>
+            <button type="button" class="lang-chip" data-lang="en">English</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <header class="portal-header">
+      <div class="container masthead-inner">
+        <div class="brand">
+          <div class="brand-mark crest">नेपाल</div>
+          <div>
+            <p class="eyebrow small" id="office-admin-gov">नेपाल सरकार</p>
+            <h1 class="font-devanagari" id="office-admin-main">विभाग तथा वडा एडमिन व्यवस्थापन</h1>
+            <p class="brand-subtitle" id="office-admin-sub">Create department and ward admin accounts</p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="section">
+        <div class="container">
+          <div class="panel auth-panel">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow small" id="office-admin-eyebrow">खाता सिर्जना</p>
+                <h3 id="office-admin-form-title">विभाग वा वडा एडमिन खाता थप्नुहोस्</h3>
+              </div>
+            </div>
+
+            <form class="auth-form" id="office-admin-form">
+              <label>
+                <span id="office-type-label">कार्यालय प्रकार</span>
+                <select id="office-type-select">
+                  <option value="department" id="office-type-department">विभाग</option>
+                  <option value="ward" id="office-type-ward">वडा</option>
+                </select>
+              </label>
+
+              <label id="division-field">
+                <span id="division-label">महाशाखा</span>
+                <select id="division-select"></select>
+              </label>
+
+              <label id="section-field">
+                <span id="section-label">साखा / युनिट</span>
+                <select id="section-select"></select>
+              </label>
+
+              <label id="ward-field">
+                <span id="ward-label">वडा नम्बर</span>
+                <select id="ward-select"></select>
+              </label>
+
+              <label>
+                <span id="name-label">नाम</span>
+                <input type="text" id="name-input" placeholder="नाम लेख्नुहोस्" />
+              </label>
+
+              <label>
+                <span id="login-label">लगइन आईडी</span>
+                <input type="text" id="login-input" placeholder="login id" />
+              </label>
+
+              <label>
+                <span id="password-label">लगइन पासवर्ड</span>
+                <input type="password" id="password-input" placeholder="password" />
+              </label>
+
+              <button type="button" class="button block dark" id="create-office-admin-button">खाता सिर्जना गर्नुहोस्</button>
+            </form>
+            <div class="form-message" id="office-admin-message"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

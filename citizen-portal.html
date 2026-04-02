@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Protected citizen complaint portal." />
-    <title>Citizen Portal</title>
+    <meta name="description" content="Citizen dashboard for complaint registration, tracking, and profile management." />
+    <title>Citizen Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -14,113 +14,282 @@
     <link rel="stylesheet" href="./frontend/src/styles/main.css" />
     <script type="module" src="./frontend/src/scripts/citizen-portal.js"></script>
   </head>
-  <body>
-    <div class="topbar">
-      <div class="container topbar-inner">
-        <div class="topbar-brand" id="portal-top-title">पोखरा महानगरपालिका नागरिक पोर्टल</div>
-        <div class="topbar-meta">
-          <div class="lang-switch">
-            <button type="button" class="lang-chip active" data-lang="ne">नेपाली</button>
-            <button type="button" class="lang-chip" data-lang="en">English</button>
-          </div>
-          <button type="button" class="button secondary compact-button" id="logout-button">लगआउट</button>
-        </div>
-      </div>
-    </div>
-
-    <header class="portal-header">
-      <div class="container masthead-inner">
-        <div class="brand">
-          <div class="brand-mark crest">नेपाल</div>
-          <div>
-            <p class="eyebrow small" id="portal-gov-label">नेपाल सरकार</p>
-            <h1 class="font-devanagari" id="portal-main-title">नागरिक गुनासो फाराम</h1>
-            <p class="brand-subtitle" id="portal-subtitle">Protected complaint submission page</p>
+  <body class="citizen-dashboard-body">
+    <div class="citizen-shell">
+      <div class="topbar">
+        <div class="container topbar-inner">
+          <div class="topbar-brand" id="portal-top-title">पोखरा महानगरपालिका नागरिक ड्यासबोर्ड</div>
+          <div class="topbar-meta">
+            <div class="lang-switch">
+              <button type="button" class="lang-chip active" data-lang="ne">नेपाली</button>
+              <button type="button" class="lang-chip" data-lang="en">English</button>
+            </div>
+            <button type="button" class="button secondary compact-button" id="logout-button">लगआउट</button>
           </div>
         </div>
       </div>
-    </header>
 
-    <main>
-      <section class="section">
-        <div class="container">
-          <div class="login-banner" id="welcome-banner"></div>
-
-          <div class="grid two-col">
-            <div class="stack" id="flow-cards"></div>
-
-            <div class="panel form-panel">
-              <div class="panel-header">
-                <div>
-                  <p class="eyebrow small" id="wizard-eyebrow">गुनासो फाराम</p>
-                  <h3 id="wizard-title">चरणगत गुनासो विवरण</h3>
-                </div>
-                <div class="wizard-step" id="wizard-step">चरण १ / ९</div>
-              </div>
-
-              <form class="auth-form complaint-form-grid">
-                <label>
-                  <span id="field-category">तपाईं कुन प्रकारको समस्या भोगिरहनुभएको छ?</span>
-                  <select>
-                    <option id="opt-road">सडक</option>
-                    <option id="opt-garbage">फोहोर</option>
-                    <option id="opt-water">पानी</option>
-                    <option id="opt-drainage">ढल</option>
-                    <option id="opt-light">बत्ती</option>
-                    <option id="opt-other">अन्य</option>
-                  </select>
-                </label>
-
-                <label>
-                  <span id="field-subcategory">विशिष्ट समस्या</span>
-                  <input type="text" id="input-subcategory" placeholder="उप-श्रेणी लेख्नुहोस्" />
-                </label>
-
-                <label>
-                  <span id="field-location">स्थान</span>
-                  <input type="text" id="input-location" placeholder="GPS वा वडा, क्षेत्र, ल्यान्डमार्क" />
-                </label>
-
-                <label>
-                  <span id="field-media">फोटो / भिडियो अपलोड</span>
-                  <input type="file" multiple />
-                </label>
-
-                <label>
-                  <span id="field-description">समस्याको विवरण</span>
-                  <textarea id="input-description" placeholder="समस्याको विस्तृत विवरण लेख्नुहोस्"></textarea>
-                </label>
-
-                <label>
-                  <span id="field-urgency">जरुरीपन</span>
-                  <select>
-                    <option id="urgency-high">उच्च</option>
-                    <option id="urgency-medium">मध्यम</option>
-                    <option id="urgency-low">न्यून</option>
-                  </select>
-                </label>
-
-                <label>
-                  <span id="field-contact">सम्पर्क विवरण</span>
-                  <input type="text" id="input-contact" placeholder="नाम, फोन, इमेल" />
-                </label>
-
-                <label>
-                  <span id="field-anonymous">गोप्य रूपमा पठाउने?</span>
-                  <select>
-                    <option id="anonymous-no">होइन</option>
-                    <option id="anonymous-yes">हो</option>
-                  </select>
-                </label>
-
-                <button type="button" class="button block primary" id="submit-complaint-button">पुष्टि गरेर पेश गर्नुहोस्</button>
-              </form>
+      <header class="portal-header citizen-header">
+        <div class="container citizen-header-inner">
+          <div class="brand">
+            <div class="brand-mark crest">नेपाल</div>
+            <div>
+              <p class="eyebrow small" id="portal-gov-label">नेपाल सरकार</p>
+              <h1 class="font-devanagari" id="portal-main-title">नागरिक ड्यासबोर्ड</h1>
+              <p class="brand-subtitle" id="portal-subtitle">गुनासो दर्ता, ट्र्याकिङ र प्रोफाइल व्यवस्थापन</p>
             </div>
           </div>
+          <div class="citizen-header-profile">
+            <div class="citizen-profile-copy">
+              <strong id="citizen-display-name">नागरिक</strong>
+              <span id="citizen-display-meta">नागरिक कोड</span>
+            </div>
+            <div class="citizen-profile-avatar" id="citizen-avatar">न</div>
+          </div>
         </div>
-      </section>
+      </header>
 
-      <button class="chatbot-fab" type="button" aria-label="Open chatbot">💬</button>
-    </main>
+      <main class="citizen-main">
+        <div class="container citizen-layout">
+          <aside class="citizen-sidebar">
+            <button type="button" class="citizen-nav-btn active" data-section="dashboard" id="nav-dashboard">ड्यासबोर्ड</button>
+            <button type="button" class="citizen-nav-btn" data-section="file" id="nav-file">नयाँ गुनासो</button>
+            <button type="button" class="citizen-nav-btn" data-section="complaints" id="nav-complaints">मेरो गुनासोहरू</button>
+            <button type="button" class="citizen-nav-btn" data-section="profile" id="nav-profile">प्रोफाइल सेटिङ</button>
+
+            <div class="citizen-points-card" id="points-card" title="">
+              <p class="eyebrow small" id="points-eyebrow">पुरस्कार अंक</p>
+              <div class="citizen-points-value" id="points-total">0</div>
+              <p class="citizen-points-copy" id="points-copy">वैध र समाधान भएका गुनासोबाट प्राप्त अंक</p>
+              <div class="citizen-points-history" id="points-history"></div>
+            </div>
+          </aside>
+
+          <section class="citizen-content">
+            <section class="citizen-section active" id="section-dashboard">
+              <div class="login-banner" id="welcome-banner"></div>
+              <div class="citizen-summary-grid" id="dashboard-stats"></div>
+
+              <div class="citizen-dashboard-grid top-gap">
+                <div class="panel">
+                  <div class="panel-header">
+                    <div>
+                      <p class="eyebrow small" id="recent-complaints-eyebrow">हालका गुनासो</p>
+                      <h3 id="recent-complaints-title">पछिल्ला ५ गुनासो</h3>
+                    </div>
+                    <button type="button" class="button primary" id="dashboard-file-button">File a Complaint</button>
+                  </div>
+                  <div id="recent-complaints-list"></div>
+                </div>
+
+                <div class="panel">
+                  <div class="panel-header">
+                    <div>
+                      <p class="eyebrow small" id="dashboard-points-eyebrow">Reward history</p>
+                      <h3 id="dashboard-points-title">अंक इतिहास</h3>
+                    </div>
+                  </div>
+                  <div id="dashboard-points-history"></div>
+                </div>
+              </div>
+            </section>
+
+            <section class="citizen-section" id="section-file">
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small" id="wizard-eyebrow">गुनासो दर्ता</p>
+                    <h3 id="wizard-title">चरणगत रूपमा गुनासो पेश गर्नुहोस्</h3>
+                  </div>
+                  <div class="wizard-step" id="wizard-step">चरण १ / ४</div>
+                </div>
+
+                <div class="citizen-stepper" id="citizen-stepper">
+                  <div class="citizen-step active"><span>1</span><strong id="step-account-label">Account</strong></div>
+                  <div class="citizen-step active"><span>2</span><strong id="step-details-label">Details</strong></div>
+                  <div class="citizen-step"><span>3</span><strong id="step-review-label">Review</strong></div>
+                </div>
+
+                <form class="auth-form complaint-form-grid citizen-complaint-form" id="complaint-form">
+                  <div class="citizen-inline-banner">
+                    <div>
+                      <strong id="anonymous-banner-title">गुमनाम रूपमा दर्ता गर्नुहोस्</strong>
+                      <p id="anonymous-banner-copy">अन गर्दा अधिकारीलाई तपाईंको नाम र सम्पर्क विवरण देखाइँदैन।</p>
+                    </div>
+                    <label class="citizen-switch">
+                      <input type="checkbox" id="input-anonymous" name="anonymous" />
+                      <span></span>
+                    </label>
+                  </div>
+
+                  <div class="citizen-form-card" id="complainant-card">
+                    <div class="panel-header">
+                      <div>
+                        <p class="eyebrow small" id="complainant-eyebrow">व्यक्तिगत विवरण</p>
+                        <h3 id="complainant-title">आधारभूत नागरिक जानकारी</h3>
+                      </div>
+                    </div>
+                    <div class="grid two-col citizen-form-grid">
+                      <label>
+                        <span id="field-contact-name">पूरा नाम</span>
+                        <input type="text" id="input-contact-name" name="contactName" placeholder="उदाहरण: राजन शर्मा" />
+                      </label>
+                      <label>
+                        <span id="field-contact-phone">सम्पर्क नम्बर</span>
+                        <input type="text" id="input-contact-phone" name="contactPhone" placeholder="98XXXXXXXX" />
+                      </label>
+                    </div>
+                    <label>
+                      <span id="field-contact-email">इमेल ठेगाना</span>
+                      <input type="text" id="input-contact-email" name="contactEmail" placeholder="example@email.com" />
+                    </label>
+                  </div>
+
+                  <div class="citizen-form-card">
+                    <div class="panel-header">
+                      <div>
+                        <p class="eyebrow small" id="complaint-info-eyebrow">गुनासोको विवरण</p>
+                        <h3 id="complaint-info-title">समस्या दर्ता जानकारी</h3>
+                      </div>
+                    </div>
+
+                    <div class="grid two-col citizen-form-grid">
+                      <label>
+                        <span id="field-category">गुनासोको विभाग/वर्ग</span>
+                        <select id="complaint-category" name="category"></select>
+                      </label>
+                      <label>
+                        <span id="field-title">गुनासोको शीर्षक</span>
+                        <input type="text" id="input-title" name="title" placeholder="छोटो शीर्षक दिनुहोस्" />
+                      </label>
+                    </div>
+
+                    <div class="grid two-col citizen-form-grid">
+                      <label>
+                        <span id="field-ward">वडा नम्बर</span>
+                        <select id="input-ward" name="wardNumber"></select>
+                      </label>
+                      <label>
+                        <span id="field-location">स्थान / ल्यान्डमार्क</span>
+                        <input type="text" id="input-location" name="locationText" placeholder="GPS वा स्थान विवरण" />
+                      </label>
+                    </div>
+
+                    <div class="grid two-col citizen-form-grid">
+                      <label>
+                        <span id="field-subcategory">विशिष्ट समस्या</span>
+                        <input type="text" id="input-subcategory" name="subcategory" placeholder="जस्तै: खाल्डो, ढल अवरोध" />
+                      </label>
+                      <label>
+                        <span id="field-area">क्षेत्र / टोल</span>
+                        <input type="text" id="input-area" name="areaName" placeholder="क्षेत्र वा टोल" />
+                      </label>
+                    </div>
+
+                    <label>
+                      <span id="field-description">गुनासोको पूर्ण विवरण</span>
+                      <textarea id="input-description" name="description" placeholder="समस्याको विस्तृत विवरण लेख्नुहोस्"></textarea>
+                    </label>
+
+                    <div class="grid two-col citizen-form-grid">
+                      <label>
+                        <span id="field-landmark">नजिकको ल्यान्डमार्क</span>
+                        <input type="text" id="input-landmark" name="nearestLandmark" placeholder="नजिकको चिनारी" />
+                      </label>
+                      <label>
+                        <span id="field-urgency">जरुरीपन</span>
+                        <select id="input-priority" name="priority">
+                          <option value="high" id="urgency-high">उच्च</option>
+                          <option value="medium" id="urgency-medium">मध्यम</option>
+                          <option value="low" id="urgency-low">न्यून</option>
+                        </select>
+                      </label>
+                    </div>
+
+                    <div class="grid two-col citizen-form-grid">
+                      <button type="button" class="button secondary" id="capture-gps-button">GPS लिनुहोस्</button>
+                      <label>
+                        <span id="field-contact-optin">अपडेटका लागि सम्पर्क राख्ने?</span>
+                        <select id="input-contact-optin" name="contactOptIn">
+                          <option value="yes" id="contact-optin-yes">हो</option>
+                          <option value="no" id="contact-optin-no">होइन</option>
+                        </select>
+                      </label>
+                    </div>
+
+                    <label>
+                      <span id="field-media">फोटो / कागजात संलग्न गर्नुहोस्</span>
+                      <input type="file" id="input-proof-files" accept="image/*,.pdf" multiple />
+                    </label>
+                    <div id="attachment-preview-list" class="attachment-preview-list"></div>
+                  </div>
+
+                  <div class="action-strip citizen-form-actions">
+                    <button type="button" class="button dark" id="submit-complaint-button">गुनासो पेश गर्नुहोस्</button>
+                  </div>
+                </form>
+
+                <div class="form-message" id="complaint-message"></div>
+                <div class="wizard-summary hidden-section" id="complaint-result-card"></div>
+              </div>
+            </section>
+
+            <section class="citizen-section" id="section-complaints">
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small" id="my-complaints-eyebrow">मेरो गुनासोहरू</p>
+                    <h3 id="my-complaints-title">फिल्टर, हेर्नुहोस्, र समयरेखा जाँच गर्नुहोस्</h3>
+                  </div>
+                </div>
+
+                <div class="citizen-filter-grid">
+                  <label>
+                    <span id="filter-status-label">स्थिति</span>
+                    <select id="complaint-filter-status"></select>
+                  </label>
+                  <label>
+                    <span id="filter-department-label">विभाग</span>
+                    <select id="complaint-filter-department"></select>
+                  </label>
+                  <label>
+                    <span id="filter-from-label">मिति देखि</span>
+                    <input type="date" id="complaint-filter-from" />
+                  </label>
+                  <label>
+                    <span id="filter-to-label">मिति सम्म</span>
+                    <input type="date" id="complaint-filter-to" />
+                  </label>
+                </div>
+
+                <div id="my-complaints-list"></div>
+              </div>
+
+              <div class="panel top-gap">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small" id="complaint-detail-eyebrow">विस्तृत दृश्य</p>
+                    <h3 id="complaint-detail-title">चयन गरिएको गुनासो</h3>
+                  </div>
+                </div>
+                <div id="complaint-detail-panel"></div>
+              </div>
+            </section>
+
+            <section class="citizen-section" id="section-profile">
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small" id="profile-eyebrow">प्रोफाइल सेटिङ</p>
+                    <h3 id="profile-title">दर्ता विवरण</h3>
+                  </div>
+                </div>
+                <div class="details-list" id="profile-settings-panel"></div>
+              </div>
+            </section>
+          </section>
+        </div>
+      </main>
+    </div>
   </body>
 </html>

@@ -1,6 +1,10 @@
 export { connectDatabase, getDatabase, getMongoClient } from "./client.js";
 export { collectionNames, getCollection, getCollections } from "./collections.js";
 export { getUserRepository } from "./repositories/userRepository.js";
+export { getOfficeAccountRepository } from "./repositories/officeAccountRepository.js";
+export { getSessionRepository } from "./repositories/sessionRepository.js";
+export { getAssignmentCounterRepository } from "./repositories/assignmentCounterRepository.js";
+export { getCommentRepository } from "./repositories/commentRepository.js";
 export { getComplaintRepository } from "./repositories/complaintRepository.js";
 export { getDepartmentRepository } from "./repositories/departmentRepository.js";
 export { getWardRepository } from "./repositories/wardRepository.js";

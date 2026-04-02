@@ -45,60 +45,169 @@
         <div class="container">
           <div class="login-banner" id="admin-welcome-banner"></div>
 
-          <div class="summary-row">
-            <div class="panel summary-card"><strong>10</strong><span id="summary-divisions">महाशाखा</span></div>
-            <div class="panel summary-card"><strong>25</strong><span id="summary-sections">साखा / युनिट</span></div>
-            <div class="panel summary-card"><strong>33</strong><span id="summary-wards">वडा कार्यालय</span></div>
+          <div class="action-strip">
+            <a href="./add-department-admin.html" class="button dark" id="add-department-admin-button">Add Department Admin</a>
           </div>
 
-          <div class="grid two-col">
-            <div>
-              <div class="section-intro compact">
-                <span class="eyebrow" id="division-eyebrow">विभागहरू</span>
-                <h2 id="division-title">सबै महाशाखा र साखाहरू</h2>
-              </div>
-              <div class="management-grid" id="division-grid"></div>
-            </div>
+          <div class="summary-row" id="admin-status-summary"></div>
 
-            <div>
-              <div class="section-intro compact">
-                <span class="eyebrow" id="form-eyebrow">विभाग खाता सिर्जना</span>
-                <h2 id="form-title">छानिएको विभागका लागि लगइन सिर्जना गर्नुहोस्</h2>
+          <div class="panel top-gap">
+            <div class="panel-header">
+              <div>
+                <p class="eyebrow small" id="sla-alerts-eyebrow">SLA Alerts</p>
+                <h3 id="sla-alerts-title">First-response SLA breach alerts</h3>
               </div>
-              <div class="panel auth-panel">
-                <form class="auth-form" id="department-account-form">
-                  <label>
-                    <span id="selected-division-label">छानिएको महाशाखा</span>
-                    <input type="text" id="selected-division-input" readonly />
-                  </label>
-                  <label>
-                    <span id="selected-section-label">साखा / युनिट</span>
-                    <select id="selected-section-input"></select>
-                  </label>
-                  <label>
-                    <span id="department-name-label">अधिकृत / विभाग नाम</span>
-                    <input type="text" id="department-name-input" placeholder="नाम लेख्नुहोस्" />
-                  </label>
-                  <label>
-                    <span id="department-login-label">लगइन आईडी</span>
-                    <input type="text" id="department-login-input" placeholder="login id" />
-                  </label>
-                  <label>
-                    <span id="department-password-label">लगइन पासवर्ड</span>
-                    <input type="password" id="department-password-input" placeholder="password" />
-                  </label>
-                  <button type="button" class="button block dark" id="create-department-account-button">खाता सिर्जना गर्नुहोस्</button>
-                </form>
-                <div class="form-message" id="department-account-message"></div>
-              </div>
-
-              <div class="section-intro compact top-gap">
-                <span class="eyebrow" id="ward-eyebrow">वडा कार्यालयहरू</span>
-                <h2 id="ward-title">३३ वडा पहुँच सूची</h2>
-              </div>
-              <div class="ward-grid" id="ward-grid"></div>
             </div>
+            <div id="sla-alerts-list"></div>
           </div>
+
+          <div class="dashboard-button-row" id="admin-dashboard-buttons">
+            <button type="button" class="button secondary dashboard-tab active" data-tab="department-complaints" id="btn-department-complaints">
+              Complain Based on Department
+            </button>
+            <button type="button" class="button secondary dashboard-tab" data-tab="solved-complaints" id="btn-solved-complaints">
+              Solved Complain
+            </button>
+            <button type="button" class="button secondary dashboard-tab" data-tab="progress-complaints" id="btn-progress-complaints">
+              In Progress
+            </button>
+            <button type="button" class="button secondary dashboard-tab" data-tab="pending-complaints" id="btn-pending-complaints">
+              Pending Complain
+            </button>
+            <button type="button" class="button secondary dashboard-tab" data-tab="forwarded-complaints" id="btn-forwarded-complaints">
+              Forwarded Complain
+            </button>
+            <button type="button" class="button secondary dashboard-tab" data-tab="central-admin-complaints" id="btn-central-admin-complaints">
+              Central Admin Escalations
+            </button>
+          </div>
+
+          <section class="dashboard-panel active" id="department-complaints-panel">
+            <div class="grid two-col admin-analytics-grid">
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small" id="dept-graph-eyebrow">विभागीय गुनासो</p>
+                    <h3 id="dept-graph-title">विभाग अनुसार गुनासो ग्राफ</h3>
+                  </div>
+                </div>
+                <div id="department-complaint-graph"></div>
+              </div>
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small" id="ward-graph-eyebrow">वडागत गुनासो</p>
+                    <h3 id="ward-graph-title">वडा अनुसार गुनासो ग्राफ</h3>
+                  </div>
+                </div>
+                <div id="ward-complaint-graph"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="dashboard-panel" id="solved-complaints-panel">
+            <div class="grid two-col admin-analytics-grid">
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small" id="solved-graph-eyebrow">समाधान भएका गुनासो</p>
+                    <h3 id="solved-graph-title">समाधान प्रतिशत</h3>
+                  </div>
+                </div>
+                <div id="solved-complaint-graph"></div>
+              </div>
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small" id="solved-summary-eyebrow">समाधान सारांश</p>
+                    <h3 id="solved-summary-title">विभाग अनुसार समाधान स्थिति</h3>
+                  </div>
+                </div>
+                <div id="solved-summary-list"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="dashboard-panel" id="progress-complaints-panel">
+            <div class="grid two-col admin-analytics-grid">
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small" id="progress-dept-eyebrow">कार्य प्रगतिमा</p>
+                    <h3 id="progress-dept-title">विभाग अनुसार कार्य प्रगतिमा</h3>
+                  </div>
+                </div>
+                <div id="progress-department-graph"></div>
+              </div>
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small" id="progress-ward-eyebrow">वडागत प्रगति</p>
+                    <h3 id="progress-ward-title">वडा अनुसार कार्य प्रगतिमा</h3>
+                  </div>
+                </div>
+                <div id="progress-ward-graph"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="dashboard-panel" id="pending-complaints-panel">
+            <div class="grid two-col admin-analytics-grid">
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small" id="pending-graph-eyebrow">समयसीमा नाघेका गुनासो</p>
+                    <h3 id="pending-graph-title">पेन्डिङ गुनासो ग्राफ</h3>
+                  </div>
+                </div>
+                <div id="pending-complaint-graph"></div>
+              </div>
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small" id="pending-list-eyebrow">पेन्डिङ सूची</p>
+                    <h3 id="pending-list-title">समयसीमा नाघेका गुनासोहरू</h3>
+                  </div>
+                </div>
+                <div id="pending-complaint-list"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="dashboard-panel" id="forwarded-complaints-panel">
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="eyebrow small" id="forwarded-list-eyebrow">फर्वार्ड गरिएका गुनासो</p>
+                  <h3 id="forwarded-list-title">विभाग / वडा बाट फर्वार्ड गरिएको सूची</h3>
+                </div>
+              </div>
+              <div id="forwarded-complaint-list"></div>
+            </div>
+          </section>
+
+          <section class="dashboard-panel" id="central-admin-complaints-panel">
+            <div class="grid two-col admin-analytics-grid">
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small" id="central-admin-graph-eyebrow">केन्द्रीय प्रशासनमा पुगेका गुनासो</p>
+                    <h3 id="central-admin-graph-title">केन्द्रीय प्रशासनलाई तोकिएका गुनासो</h3>
+                  </div>
+                </div>
+                <div id="central-admin-complaint-graph"></div>
+              </div>
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small" id="central-admin-list-eyebrow">एस्केलेसन सूची</p>
+                    <h3 id="central-admin-list-title">वडा वा विभागले समाधान गर्न नसकेका गुनासोहरू</h3>
+                  </div>
+                </div>
+                <div id="central-admin-complaint-list"></div>
+              </div>
+            </div>
+          </section>
         </div>
       </section>
     </main>

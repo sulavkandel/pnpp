@@ -1,0 +1,24 @@
+export const OfficeAccountModelShape = {
+  id: "ObjectId|string",
+  role: "department | ward",
+  officeType: "department | ward",
+  name: "string",
+  loginId: "string",
+  passwordHash: "string",
+  divisionName: "optional string",
+  sectionName: "optional string",
+  wardNumber: "optional string",
+  status: "active | inactive",
+  assignmentWeeks: ["YYYY-WNN weekly duty keys"],
+  currentWeekPoints: "number",
+  allTimePoints: "number",
+  performanceAdjustments: [
+    {
+      points: "positive or negative number",
+      message: "admin feedback / adjustment note",
+      createdAt: "Date",
+    },
+  ],
+  createdAt: "Date",
+  updatedAt: "Date",
+};

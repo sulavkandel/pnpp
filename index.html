@@ -93,8 +93,8 @@
               </div>
               <form class="auth-form" id="citizen-login-form">
                 <label>
-                  <span data-i18n="fieldMobile">मोबाइल नम्बर</span>
-                  <input type="text" name="mobileNumber" data-i18n-placeholder="placeholderMobile" placeholder="98XXXXXXXX" />
+                  <span data-i18n="fieldCitizenIdentifier">मोबाइल नम्बर वा नागरिक कोड</span>
+                  <input type="text" name="identifier" data-i18n-placeholder="placeholderCitizenIdentifier" placeholder="98XXXXXXXX वा CIT-1234" />
                 </label>
                 <label>
                   <span data-i18n="fieldPassword">पासवर्ड</span>
@@ -124,8 +124,16 @@
                   <input type="text" name="mobileNumber" data-i18n-placeholder="placeholderMobile" placeholder="98XXXXXXXX" />
                 </label>
                 <label>
+                  <span data-i18n="fieldEmail">इमेल</span>
+                  <input type="text" name="email" data-i18n-placeholder="placeholderEmail" placeholder="example@email.com" />
+                </label>
+                <label>
                   <span data-i18n="fieldPassword">पासवर्ड</span>
                   <input type="password" name="password" data-i18n-placeholder="placeholderCreatePassword" placeholder="पासवर्ड बनाउनुहोस्" />
+                </label>
+                <label class="citizen-check-row">
+                  <input type="checkbox" name="registerAnonymously" />
+                  <span data-i18n="fieldRegisterAnonymous">गुमनाम रूपमा दर्ता गर्ने</span>
                 </label>
                 <button type="button" class="button block secondary">
                   <span data-i18n="signupButton">दर्ता गर्नुहोस्</span>
@@ -149,12 +157,13 @@
             <div class="track-search">
               <label>
                 <span data-i18n="trackField">गुनासो नम्बर वा मोबाइल नम्बर</span>
-                <input type="text" data-i18n-placeholder="placeholderTrack" placeholder="PMC-2026-001245 वा 98XXXXXXXX" />
+                <input type="text" id="track-query-input" data-i18n-placeholder="placeholderTrack" placeholder="PMC-2026-001245 वा 98XXXXXXXX" />
               </label>
-              <button type="button" class="button primary" data-i18n="trackNow">ट्र्याक गर्नुहोस्</button>
+              <button type="button" class="button primary" id="track-complaint-button" data-i18n="trackNow">ट्र्याक गर्नुहोस्</button>
+              <div class="form-message" id="track-message"></div>
             </div>
             <div class="track-result">
-              <div class="track-pill" data-i18n="trackStatus">हालको स्थिति: कार्य प्रगतिमा</div>
+              <div class="track-pill" id="track-status-pill" data-i18n="trackStatus">हालको स्थिति: कार्य प्रगतिमा</div>
               <div class="dark-card">
                 <p class="eyebrow small light" data-i18n="timelineEyebrow">समयरेखा</p>
                 <div class="timeline" id="tracking-timeline"></div>

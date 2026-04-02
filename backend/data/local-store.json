@@ -30,6 +30,11 @@
   ],
   "officeAccounts": [
     {
+      "activationStartAt": "2026-04-02T13:05:53.212Z",
+      "activationExpiresAt": "2026-04-08T13:05:53.212Z",
+      "performanceAdjustments": [],
+      "currentWeekPoints": 0,
+      "allTimePoints": 0,
       "_id": "office-road-admin-demo",
       "officeType": "department",
       "role": "department",
@@ -41,9 +46,17 @@
       "wardNumber": "",
       "status": "active",
       "createdAt": "2026-04-02T02:07:26.066Z",
-      "updatedAt": "2026-04-02T02:07:26.071Z"
+      "updatedAt": "2026-04-02T02:07:26.071Z",
+      "assignmentWeeks": [
+        "2026-W14"
+      ]
     },
     {
+      "activationStartAt": "2026-04-02T13:05:53.212Z",
+      "activationExpiresAt": "2026-04-08T13:05:53.212Z",
+      "performanceAdjustments": [],
+      "currentWeekPoints": 0,
+      "allTimePoints": 0,
       "_id": "office-ward-17-demo",
       "officeType": "ward",
       "role": "ward",
@@ -58,6 +71,11 @@
       "updatedAt": "2026-04-02T02:07:26.071Z"
     },
     {
+      "activationStartAt": "2026-04-02T13:05:53.212Z",
+      "activationExpiresAt": "2026-04-08T13:05:53.212Z",
+      "performanceAdjustments": [],
+      "currentWeekPoints": 0,
+      "allTimePoints": 0,
       "_id": "office-fc895f39c3fc",
       "role": "ward",
       "officeType": "ward",
@@ -72,6 +90,11 @@
       "updatedAt": "2026-04-02T02:19:00.872Z"
     },
     {
+      "activationStartAt": "2026-04-02T13:05:53.212Z",
+      "activationExpiresAt": "2026-04-08T13:05:53.212Z",
+      "performanceAdjustments": [],
+      "currentWeekPoints": 0,
+      "allTimePoints": 0,
       "_id": "office-ed22fc164b04",
       "role": "department",
       "officeType": "department",
@@ -86,6 +109,11 @@
       "updatedAt": "2026-04-02T02:23:53.657Z"
     },
     {
+      "activationStartAt": "2026-04-02T13:05:53.212Z",
+      "activationExpiresAt": "2026-04-08T13:05:53.212Z",
+      "performanceAdjustments": [],
+      "currentWeekPoints": 0,
+      "allTimePoints": 0,
       "_id": "office-aece80f9eabd",
       "role": "ward",
       "officeType": "ward",
@@ -99,13 +127,15 @@
       "assignmentWeeks": [
         "2026-W14"
       ],
-      "currentWeekPoints": 0,
-      "allTimePoints": 0,
-      "performanceAdjustments": [],
       "createdAt": "2026-04-02T05:39:05.121Z",
       "updatedAt": "2026-04-02T05:39:05.121Z"
     },
     {
+      "activationStartAt": "2026-04-02T13:05:53.212Z",
+      "activationExpiresAt": "2026-04-08T13:05:53.212Z",
+      "performanceAdjustments": [],
+      "currentWeekPoints": 0,
+      "allTimePoints": 0,
       "_id": "office-25622c7deb7d",
       "role": "department",
       "officeType": "department",
@@ -120,13 +150,15 @@
       "passwordHash": "edee29f882543b956620b26d0ee0e7e950399b1c4222f5de05e06425b4c995e9",
       "status": "active",
       "assignmentWeeks": [],
-      "currentWeekPoints": 0,
-      "allTimePoints": 0,
-      "performanceAdjustments": [],
       "createdAt": "2026-04-02T08:03:45.219Z",
       "updatedAt": "2026-04-02T08:03:45.219Z"
     },
     {
+      "activationStartAt": "2026-04-02T13:05:53.212Z",
+      "activationExpiresAt": "2026-04-08T13:05:53.212Z",
+      "performanceAdjustments": [],
+      "currentWeekPoints": 0,
+      "allTimePoints": 0,
       "_id": "office-bdaa5d5ffc15",
       "role": "ward",
       "officeType": "ward",
@@ -141,9 +173,6 @@
       "passwordHash": "318aee3fed8c9d040d35a7fc1fa776fb31303833aa2de885354ddf3d44d8fb69",
       "status": "active",
       "assignmentWeeks": [],
-      "currentWeekPoints": 0,
-      "allTimePoints": 0,
-      "performanceAdjustments": [],
       "createdAt": "2026-04-02T08:04:36.614Z",
       "updatedAt": "2026-04-02T08:04:36.614Z"
     }
@@ -642,6 +671,68 @@
       "createdAt": "2026-04-02T08:36:10.483Z",
       "expiresAt": "2026-04-02T20:36:10.483Z",
       "revokedAt": null
+    },
+    {
+      "tokenHash": "1549666104844a7fce15cea316838d114e402c23186a0145a223540d39b7b87a",
+      "principal": {
+        "principalId": "central-admin",
+        "role": "admin",
+        "name": "Super Admin",
+        "loginId": "admin@pokharamun.gov.np"
+      },
+      "createdAt": "2026-04-02T12:27:42.777Z",
+      "expiresAt": "2026-04-03T00:27:42.777Z",
+      "revokedAt": null
+    },
+    {
+      "tokenHash": "c3b183c8c2a169ec7d7239ea787d843262228e06e4856c7fa9e44113b2685bbd",
+      "principal": {
+        "principalId": "office-25622c7deb7d",
+        "role": "department",
+        "name": "Suresh thapa",
+        "officeType": "department",
+        "loginId": "2222",
+        "divisionName": "Infrastructure Development",
+        "sectionName": "",
+        "wardNumber": "",
+        "assignmentWeeks": [
+          "2026-W14"
+        ]
+      },
+      "createdAt": "2026-04-02T13:05:53.202Z",
+      "expiresAt": "2026-04-03T01:05:53.202Z",
+      "revokedAt": null
+    },
+    {
+      "tokenHash": "0906c995edb4b7f4cf1bb15043ba38548a222a6bbb5d343992d16c461d96068b",
+      "principal": {
+        "principalId": "central-admin",
+        "role": "admin",
+        "name": "Super Admin",
+        "loginId": "admin@pokharamun.gov.np"
+      },
+      "createdAt": "2026-04-02T13:20:11.648Z",
+      "expiresAt": "2026-04-03T01:20:11.648Z",
+      "revokedAt": null
+    },
+    {
+      "tokenHash": "673e7d6c3bb595eafd11443ecb6db0b2d23e6feffed8d714b694b46a4b579445",
+      "principal": {
+        "principalId": "office-25622c7deb7d",
+        "role": "department",
+        "name": "Suresh thapa",
+        "officeType": "department",
+        "loginId": "2222",
+        "divisionName": "Infrastructure Development",
+        "sectionName": "",
+        "wardNumber": "",
+        "assignmentWeeks": [
+          "2026-W14"
+        ]
+      },
+      "createdAt": "2026-04-02T14:31:28.348Z",
+      "expiresAt": "2026-04-03T02:31:28.348Z",
+      "revokedAt": null
     }
   ],
   "assignmentCounters": [
@@ -1066,6 +1157,200 @@
       "acceptedAt": null,
       "acceptedByOfficerId": "",
       "forwardedToLabel": "Escalated to Central Admin"
+    },
+    {
+      "_id": "complaint-demo-escalated-001",
+      "tokenNumber": "PMC-2026-990101",
+      "citizenId": "demo-citizen-1",
+      "citizenMobileNumber": "9800000001",
+      "title": "Major roadside collapse near ward office",
+      "category": "road",
+      "subcategory": "Road emergency",
+      "description": "The retaining edge has collapsed and local ward office could not contain the damage.",
+      "locationText": "Ward 2 riverside corridor",
+      "areaName": "Ward 2",
+      "nearestLandmark": "Ward office junction",
+      "wardNumber": "2",
+      "priority": "high",
+      "status": "escalated",
+      "officeType": "central_admin",
+      "divisionName": "Infrastructure Development",
+      "sectionName": "Road Section",
+      "routeBucket": "central-admin",
+      "assignmentReason": "Escalated for central coordination.",
+      "assignedOfficerId": "",
+      "assignedOfficerName": "Central Admin",
+      "assignedDepartment": "Central Admin",
+      "assignedOfficeLabel": "Central Admin",
+      "forwardedTo": "Escalated to Central Admin",
+      "escalated": true,
+      "delayReason": "",
+      "anonymous": false,
+      "contactOptIn": true,
+      "contactName": "Demo Citizen",
+      "contactPhone": "9800000001",
+      "contactEmail": "",
+      "estimatedCompletionAt": null,
+      "slaDueAt": "2026-04-02T05:05:53.212Z",
+      "firstResponseAt": "2026-04-02T03:05:53.212Z",
+      "createdAt": "2026-04-01T01:05:53.212Z",
+      "updatedAt": "2026-04-02T11:05:53.212Z",
+      "latestComments": [],
+      "comments": [],
+      "citizenRating": 0,
+      "closureConfirmedAt": null,
+      "pointsAwarded": 0,
+      "validityVerified": false,
+      "history": [
+        {
+          "action": "submitted",
+          "officerName": "Citizen",
+          "officerRole": "citizen",
+          "timestamp": "2026-04-01T01:05:53.212Z",
+          "note": "Complaint registered by citizen."
+        },
+        {
+          "action": "escalated",
+          "officerName": "Ward Office",
+          "officerRole": "ward",
+          "timestamp": "2026-04-02T11:05:53.212Z",
+          "note": "Transferred to central admin for inter-department handling."
+        }
+      ]
+    },
+    {
+      "_id": "complaint-demo-invalid-001",
+      "tokenNumber": "PMC-2026-990102",
+      "citizenId": "demo-citizen-2",
+      "citizenMobileNumber": "9800000002",
+      "title": "Duplicate sanitation complaint",
+      "category": "garbage",
+      "subcategory": "Duplicate filing",
+      "description": "Officer marked the complaint as invalid and requested admin verification.",
+      "locationText": "Ward 5 market area",
+      "wardNumber": "5",
+      "priority": "low",
+      "status": "pending_admin_verification",
+      "officeType": "department",
+      "divisionName": "Urban Dev & Environment",
+      "sectionName": "Sanitation/Waste",
+      "routeBucket": "department:Urban Dev & Environment:Sanitation/Waste",
+      "assignmentReason": "Pending admin verification.",
+      "assignedOfficerId": "",
+      "assignedOfficerName": "Sanitation Officer",
+      "assignedDepartment": "Urban Dev & Environment",
+      "assignedOfficeLabel": "Urban Dev & Environment / Sanitation/Waste",
+      "forwardedTo": "",
+      "escalated": false,
+      "delayReason": "",
+      "anonymous": false,
+      "contactOptIn": true,
+      "contactName": "Demo Citizen",
+      "contactPhone": "9800000002",
+      "contactEmail": "",
+      "estimatedCompletionAt": null,
+      "slaDueAt": "2026-04-03T13:05:53.212Z",
+      "firstResponseAt": "2026-04-02T10:05:53.212Z",
+      "createdAt": "2026-04-01T23:05:53.212Z",
+      "updatedAt": "2026-04-02T11:05:53.212Z",
+      "latestComments": [],
+      "comments": [],
+      "citizenRating": 0,
+      "closureConfirmedAt": null,
+      "pointsAwarded": 0,
+      "validityVerified": false,
+      "history": [
+        {
+          "action": "submitted",
+          "officerName": "Citizen",
+          "officerRole": "citizen",
+          "timestamp": "2026-04-01T23:05:53.212Z",
+          "note": "Complaint registered by citizen."
+        },
+        {
+          "action": "invalid_request",
+          "officerName": "Sanitation Officer",
+          "officerRole": "department",
+          "timestamp": "2026-04-02T11:05:53.212Z",
+          "note": "Marked invalid pending admin verification."
+        }
+      ]
+    },
+    {
+      "_id": "complaint-demo-review-001",
+      "tokenNumber": "PMC-2026-990103",
+      "citizenId": "demo-citizen-3",
+      "citizenMobileNumber": "9800000003",
+      "title": "Road drainage repair eventually completed",
+      "category": "drainage",
+      "subcategory": "Drainage blockage",
+      "description": "First officer said it was outside department scope, next weekly officer solved it.",
+      "locationText": "Ward 7 main road",
+      "wardNumber": "7",
+      "priority": "medium",
+      "status": "solved",
+      "officeType": "department",
+      "divisionName": "Infrastructure Development",
+      "sectionName": "Road Section",
+      "routeBucket": "department:Infrastructure Development:Road Section",
+      "assignmentReason": "Resolved after officer action review.",
+      "assignedOfficerId": "office-road-admin-demo",
+      "assignedOfficerName": "Road Admin Test",
+      "assignedDepartment": "Infrastructure Development",
+      "assignedOfficeLabel": "Infrastructure Development / Road Section",
+      "forwardedTo": "",
+      "escalated": false,
+      "delayReason": "",
+      "anonymous": false,
+      "contactOptIn": true,
+      "contactName": "Demo Citizen",
+      "contactPhone": "9800000003",
+      "contactEmail": "",
+      "estimatedCompletionAt": "2026-04-01T13:05:53.212Z",
+      "slaDueAt": "2026-03-30T13:05:53.212Z",
+      "firstResponseAt": "2026-03-30T13:05:53.212Z",
+      "acceptedAt": "2026-03-31T13:05:53.212Z",
+      "acceptedByOfficerId": "office-road-admin-demo",
+      "createdAt": "2026-03-28T13:05:53.212Z",
+      "updatedAt": "2026-04-02T01:05:53.212Z",
+      "latestComments": [],
+      "comments": [],
+      "citizenRating": 4,
+      "closureConfirmedAt": "2026-04-02T05:05:53.212Z",
+      "pointsAwarded": 40,
+      "validityVerified": true,
+      "officerActionReview": {
+        "status": "pending",
+        "priorOfficerId": "office-road-admin-demo",
+        "priorOfficerName": "Road Admin Test",
+        "resolvingOfficerId": "office-road-admin-demo",
+        "resolvingOfficerName": "Road Admin Test",
+        "createdAt": "2026-04-02T01:05:53.212Z",
+        "note": "Initial officer marked it impossible; following weekly officer completed the work."
+      },
+      "history": [
+        {
+          "action": "submitted",
+          "officerName": "Citizen",
+          "officerRole": "citizen",
+          "timestamp": "2026-03-28T13:05:53.212Z",
+          "note": "Complaint registered by citizen."
+        },
+        {
+          "action": "forwarded",
+          "officerName": "Road Admin Test",
+          "officerRole": "department",
+          "timestamp": "2026-03-29T13:05:53.212Z",
+          "note": "Claimed the issue was outside current scope."
+        },
+        {
+          "action": "solved",
+          "officerName": "Road Admin Test",
+          "officerRole": "department",
+          "timestamp": "2026-04-02T01:05:53.212Z",
+          "note": "Resolved by next weekly officer after field verification."
+        }
+      ]
     }
   ],
   "complaintComments": [
@@ -1237,6 +1522,11 @@
       "name": "Administration",
       "type": "Mahashakha",
       "wards": [],
+      "subDepartments": [
+        "Admin Section",
+        "Inspection (Security)",
+        "Fire & Emergency"
+      ],
       "active": true,
       "createdAt": "2026-04-02T07:49:53.751Z",
       "updatedAt": "2026-04-02T07:49:53.751Z"
@@ -1246,6 +1536,11 @@
       "name": "Finance & Revenue",
       "type": "Mahashakha",
       "wards": [],
+      "subDepartments": [
+        "Internal Audit",
+        "Procurement",
+        "Revenue/Tax Units"
+      ],
       "active": true,
       "createdAt": "2026-04-02T07:49:53.751Z",
       "updatedAt": "2026-04-02T07:49:53.751Z"
@@ -1288,6 +1583,12 @@
         "31",
         "32",
         "33"
+      ],
+      "subDepartments": [
+        "Road Section",
+        "Bridge Section",
+        "Water & Sewer",
+        "Buildings"
       ],
       "active": true,
       "createdAt": "2026-04-02T07:49:53.751Z",
@@ -1332,6 +1633,11 @@
         "32",
         "33"
       ],
+      "subDepartments": [
+        "Tourism",
+        "Sanitation/Waste",
+        "Greenery Units"
+      ],
       "active": true,
       "createdAt": "2026-04-02T07:49:53.751Z",
       "updatedAt": "2026-04-02T07:49:53.751Z"
@@ -1341,6 +1647,11 @@
       "name": "Planning, Monitoring & IT",
       "type": "Mahashakha",
       "wards": [],
+      "subDepartments": [
+        "IT Section",
+        "Data & Statistics",
+        "Documentation"
+      ],
       "active": true,
       "createdAt": "2026-04-02T07:49:53.751Z",
       "updatedAt": "2026-04-02T07:49:53.751Z"
@@ -1383,6 +1694,11 @@
         "31",
         "32",
         "33"
+      ],
+      "subDepartments": [
+        "Women/Child Program",
+        "Social Security",
+        "Community Development"
       ],
       "active": true,
       "createdAt": "2026-04-02T07:49:53.751Z",
@@ -1427,6 +1743,9 @@
         "32",
         "33"
       ],
+      "subDepartments": [
+        "Health Services / Health Center Coordination"
+      ],
       "active": true,
       "createdAt": "2026-04-02T07:49:53.751Z",
       "updatedAt": "2026-04-02T07:49:53.751Z"
@@ -1469,6 +1788,9 @@
         "31",
         "32",
         "33"
+      ],
+      "subDepartments": [
+        "School Management / Education Programs"
       ],
       "active": true,
       "createdAt": "2026-04-02T07:49:53.751Z",
@@ -1513,6 +1835,11 @@
         "32",
         "33"
       ],
+      "subDepartments": [
+        "Business Promotion",
+        "Employment",
+        "Agri & Livestock"
+      ],
       "active": true,
       "createdAt": "2026-04-02T07:49:53.751Z",
       "updatedAt": "2026-04-02T07:49:53.751Z"
@@ -1522,6 +1849,9 @@
       "name": "Legal",
       "type": "Mahashakha",
       "wards": [],
+      "subDepartments": [
+        "Legal Advice / Dispute Management"
+      ],
       "active": true,
       "createdAt": "2026-04-02T07:49:53.751Z",
       "updatedAt": "2026-04-02T07:49:53.751Z"

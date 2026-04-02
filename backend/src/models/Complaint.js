@@ -42,6 +42,7 @@ export const ComplaintModelShape = {
   latestComments: ["summary comments"],
   comments: ["embedded comment summaries"],
   history: ["embedded status/action history"],
+  officerActionReview: "optional { status, priorOfficerId, resolvingOfficerId, note, adminComment }",
   createdAt: "Date",
   updatedAt: "Date",
 };

@@ -14,16 +14,86 @@ const dataDir = path.resolve(process.cwd(), "data");
 const dataFile = path.join(dataDir, "local-store.json");
 
 const seededDepartments = [
-  { code: "ADMIN", name: "Administration", type: "Mahashakha", wards: [], active: true },
-  { code: "FIN", name: "Finance & Revenue", type: "Mahashakha", wards: [], active: true },
-  { code: "INFRA", name: "Infrastructure Development", type: "Mahashakha", wards: Array.from({ length: 33 }, (_, i) => String(i + 1)), active: true },
-  { code: "URBAN", name: "Urban Dev & Environment", type: "Mahashakha", wards: Array.from({ length: 33 }, (_, i) => String(i + 1)), active: true },
-  { code: "PLANIT", name: "Planning, Monitoring & IT", type: "Mahashakha", wards: [], active: true },
-  { code: "SOCIAL", name: "Social Development", type: "Mahashakha", wards: Array.from({ length: 33 }, (_, i) => String(i + 1)), active: true },
-  { code: "HEALTH", name: "Health", type: "Mahashakha", wards: Array.from({ length: 33 }, (_, i) => String(i + 1)), active: true },
-  { code: "EDU", name: "Education", type: "Mahashakha", wards: Array.from({ length: 33 }, (_, i) => String(i + 1)), active: true },
-  { code: "ECON", name: "Economic Development", type: "Mahashakha", wards: Array.from({ length: 33 }, (_, i) => String(i + 1)), active: true },
-  { code: "LEGAL", name: "Legal", type: "Mahashakha", wards: [], active: true },
+  {
+    code: "ADMIN",
+    name: "Administration",
+    type: "Mahashakha",
+    wards: [],
+    subDepartments: ["Admin Section", "Inspection (Security)", "Fire & Emergency"],
+    active: true,
+  },
+  {
+    code: "FIN",
+    name: "Finance & Revenue",
+    type: "Mahashakha",
+    wards: [],
+    subDepartments: ["Internal Audit", "Procurement", "Revenue/Tax Units"],
+    active: true,
+  },
+  {
+    code: "INFRA",
+    name: "Infrastructure Development",
+    type: "Mahashakha",
+    wards: Array.from({ length: 33 }, (_, i) => String(i + 1)),
+    subDepartments: ["Road Section", "Bridge Section", "Water & Sewer", "Buildings"],
+    active: true,
+  },
+  {
+    code: "URBAN",
+    name: "Urban Dev & Environment",
+    type: "Mahashakha",
+    wards: Array.from({ length: 33 }, (_, i) => String(i + 1)),
+    subDepartments: ["Tourism", "Sanitation/Waste", "Greenery Units"],
+    active: true,
+  },
+  {
+    code: "PLANIT",
+    name: "Planning, Monitoring & IT",
+    type: "Mahashakha",
+    wards: [],
+    subDepartments: ["IT Section", "Data & Statistics", "Documentation"],
+    active: true,
+  },
+  {
+    code: "SOCIAL",
+    name: "Social Development",
+    type: "Mahashakha",
+    wards: Array.from({ length: 33 }, (_, i) => String(i + 1)),
+    subDepartments: ["Women/Child Program", "Social Security", "Community Development"],
+    active: true,
+  },
+  {
+    code: "HEALTH",
+    name: "Health",
+    type: "Mahashakha",
+    wards: Array.from({ length: 33 }, (_, i) => String(i + 1)),
+    subDepartments: ["Health Services / Health Center Coordination"],
+    active: true,
+  },
+  {
+    code: "EDU",
+    name: "Education",
+    type: "Mahashakha",
+    wards: Array.from({ length: 33 }, (_, i) => String(i + 1)),
+    subDepartments: ["School Management / Education Programs"],
+    active: true,
+  },
+  {
+    code: "ECON",
+    name: "Economic Development",
+    type: "Mahashakha",
+    wards: Array.from({ length: 33 }, (_, i) => String(i + 1)),
+    subDepartments: ["Business Promotion", "Employment", "Agri & Livestock"],
+    active: true,
+  },
+  {
+    code: "LEGAL",
+    name: "Legal",
+    type: "Mahashakha",
+    wards: [],
+    subDepartments: ["Legal Advice / Dispute Management"],
+    active: true,
+  },
 ].map((department) => ({
   ...department,
   createdAt: new Date().toISOString(),
@@ -98,11 +168,255 @@ function readStore() {
     merged.departments = seededDepartments;
   }
 
+  merged.departments = (merged.departments || []).map((department) => {
+    const seeded = seededDepartments.find((item) => item.code === department.code);
+    return {
+      ...seeded,
+      ...department,
+      subDepartments: Array.isArray(department.subDepartments) && department.subDepartments.length
+        ? department.subDepartments
+        : (seeded?.subDepartments || []),
+    };
+  });
+
   if (!Array.isArray(merged.rotations)) {
     merged.rotations = [];
   }
 
+  ensureDemoData(merged);
+
   return merged;
+}
+
+function ensureDemoData(store) {
+  store.officeAccounts = store.officeAccounts || [];
+  store.complaints = store.complaints || [];
+  store.rotations = store.rotations || [];
+  store.complaintStatusHistory = store.complaintStatusHistory || [];
+
+  const roadOfficer = store.officeAccounts.find((item) => item.loginId === "road_admin_demo_2026")
+    || store.officeAccounts.find((item) => item.loginId === "2222")
+    || store.officeAccounts.find((item) => item.officeType === "department" && item.divisionName === "Infrastructure Development");
+  const sanitationOfficer = store.officeAccounts.find((item) => item.officeType === "department" && item.divisionName === "Urban Dev & Environment");
+
+  const now = new Date();
+  const currentWeek = currentWeekKey();
+
+  if (roadOfficer) {
+    roadOfficer.assignmentWeeks = Array.from(new Set([...(roadOfficer.assignmentWeeks || []), currentWeek]));
+  }
+
+  store.officeAccounts = store.officeAccounts.map((officer) => ({
+    activationStartAt: officer.activationStartAt || new Date().toISOString(),
+    activationExpiresAt: officer.activationExpiresAt || new Date(Date.now() + 6 * 24 * 3600000).toISOString(),
+    performanceAdjustments: officer.performanceAdjustments || [],
+    currentWeekPoints: Number(officer.currentWeekPoints || 0),
+    allTimePoints: Number(officer.allTimePoints || 0),
+    ...officer,
+  }));
+
+  const demoComplaints = [
+    {
+      _id: "complaint-demo-escalated-001",
+      tokenNumber: "PMC-2026-990101",
+      citizenId: "demo-citizen-1",
+      citizenMobileNumber: "9800000001",
+      title: "Major roadside collapse near ward office",
+      category: "road",
+      subcategory: "Road emergency",
+      description: "The retaining edge has collapsed and local ward office could not contain the damage.",
+      locationText: "Ward 2 riverside corridor",
+      areaName: "Ward 2",
+      nearestLandmark: "Ward office junction",
+      wardNumber: "2",
+      priority: "high",
+      status: "escalated",
+      officeType: "central_admin",
+      divisionName: "Infrastructure Development",
+      sectionName: "Road Section",
+      routeBucket: "central-admin",
+      assignmentReason: "Escalated for central coordination.",
+      assignedOfficerId: "",
+      assignedOfficerName: "Central Admin",
+      assignedDepartment: "Central Admin",
+      assignedOfficeLabel: "Central Admin",
+      forwardedTo: "Escalated to Central Admin",
+      escalated: true,
+      delayReason: "",
+      anonymous: false,
+      contactOptIn: true,
+      contactName: "Demo Citizen",
+      contactPhone: "9800000001",
+      contactEmail: "",
+      estimatedCompletionAt: null,
+      slaDueAt: new Date(now.getTime() - 8 * 3600000).toISOString(),
+      firstResponseAt: new Date(now.getTime() - 10 * 3600000).toISOString(),
+      createdAt: new Date(now.getTime() - 36 * 3600000).toISOString(),
+      updatedAt: new Date(now.getTime() - 2 * 3600000).toISOString(),
+      latestComments: [],
+      comments: [],
+      citizenRating: 0,
+      closureConfirmedAt: null,
+      pointsAwarded: 0,
+      validityVerified: false,
+      history: [
+        {
+          action: "submitted",
+          officerName: "Citizen",
+          officerRole: "citizen",
+          timestamp: new Date(now.getTime() - 36 * 3600000).toISOString(),
+          note: "Complaint registered by citizen.",
+        },
+        {
+          action: "escalated",
+          officerName: "Ward Office",
+          officerRole: "ward",
+          timestamp: new Date(now.getTime() - 2 * 3600000).toISOString(),
+          note: "Transferred to central admin for inter-department handling.",
+        },
+      ],
+    },
+    {
+      _id: "complaint-demo-invalid-001",
+      tokenNumber: "PMC-2026-990102",
+      citizenId: "demo-citizen-2",
+      citizenMobileNumber: "9800000002",
+      title: "Duplicate sanitation complaint",
+      category: "garbage",
+      subcategory: "Duplicate filing",
+      description: "Officer marked the complaint as invalid and requested admin verification.",
+      locationText: "Ward 5 market area",
+      wardNumber: "5",
+      priority: "low",
+      status: "pending_admin_verification",
+      officeType: "department",
+      divisionName: "Urban Dev & Environment",
+      sectionName: "Sanitation/Waste",
+      routeBucket: "department:Urban Dev & Environment:Sanitation/Waste",
+      assignmentReason: "Pending admin verification.",
+      assignedOfficerId: sanitationOfficer ? String(sanitationOfficer._id) : "",
+      assignedOfficerName: sanitationOfficer?.name || "Sanitation Officer",
+      assignedDepartment: "Urban Dev & Environment",
+      assignedOfficeLabel: "Urban Dev & Environment / Sanitation/Waste",
+      forwardedTo: "",
+      escalated: false,
+      delayReason: "",
+      anonymous: false,
+      contactOptIn: true,
+      contactName: "Demo Citizen",
+      contactPhone: "9800000002",
+      contactEmail: "",
+      estimatedCompletionAt: null,
+      slaDueAt: new Date(now.getTime() + 24 * 3600000).toISOString(),
+      firstResponseAt: new Date(now.getTime() - 3 * 3600000).toISOString(),
+      createdAt: new Date(now.getTime() - 14 * 3600000).toISOString(),
+      updatedAt: new Date(now.getTime() - 2 * 3600000).toISOString(),
+      latestComments: [],
+      comments: [],
+      citizenRating: 0,
+      closureConfirmedAt: null,
+      pointsAwarded: 0,
+      validityVerified: false,
+      history: [
+        {
+          action: "submitted",
+          officerName: "Citizen",
+          officerRole: "citizen",
+          timestamp: new Date(now.getTime() - 14 * 3600000).toISOString(),
+          note: "Complaint registered by citizen.",
+        },
+        {
+          action: "invalid_request",
+          officerName: sanitationOfficer?.name || "Sanitation Officer",
+          officerRole: "department",
+          timestamp: new Date(now.getTime() - 2 * 3600000).toISOString(),
+          note: "Marked invalid pending admin verification.",
+        },
+      ],
+    },
+    {
+      _id: "complaint-demo-review-001",
+      tokenNumber: "PMC-2026-990103",
+      citizenId: "demo-citizen-3",
+      citizenMobileNumber: "9800000003",
+      title: "Road drainage repair eventually completed",
+      category: "drainage",
+      subcategory: "Drainage blockage",
+      description: "First officer said it was outside department scope, next weekly officer solved it.",
+      locationText: "Ward 7 main road",
+      wardNumber: "7",
+      priority: "medium",
+      status: "solved",
+      officeType: "department",
+      divisionName: "Infrastructure Development",
+      sectionName: "Road Section",
+      routeBucket: "department:Infrastructure Development:Road Section",
+      assignmentReason: "Resolved after officer action review.",
+      assignedOfficerId: roadOfficer ? String(roadOfficer._id) : "",
+      assignedOfficerName: roadOfficer?.name || "Road Admin Test",
+      assignedDepartment: "Infrastructure Development",
+      assignedOfficeLabel: "Infrastructure Development / Road Section",
+      forwardedTo: "",
+      escalated: false,
+      delayReason: "",
+      anonymous: false,
+      contactOptIn: true,
+      contactName: "Demo Citizen",
+      contactPhone: "9800000003",
+      contactEmail: "",
+      estimatedCompletionAt: new Date(now.getTime() - 24 * 3600000).toISOString(),
+      slaDueAt: new Date(now.getTime() - 3 * 24 * 3600000).toISOString(),
+      firstResponseAt: new Date(now.getTime() - 3 * 24 * 3600000).toISOString(),
+      acceptedAt: new Date(now.getTime() - 2 * 24 * 3600000).toISOString(),
+      acceptedByOfficerId: roadOfficer ? String(roadOfficer._id) : "",
+      createdAt: new Date(now.getTime() - 5 * 24 * 3600000).toISOString(),
+      updatedAt: new Date(now.getTime() - 12 * 3600000).toISOString(),
+      latestComments: [],
+      comments: [],
+      citizenRating: 4,
+      closureConfirmedAt: new Date(now.getTime() - 8 * 3600000).toISOString(),
+      pointsAwarded: 40,
+      validityVerified: true,
+      officerActionReview: {
+        status: "pending",
+        priorOfficerId: "office-road-admin-demo",
+        priorOfficerName: "Road Admin Test",
+        resolvingOfficerId: roadOfficer ? String(roadOfficer._id) : "",
+        resolvingOfficerName: roadOfficer?.name || "Road Admin Test",
+        createdAt: new Date(now.getTime() - 12 * 3600000).toISOString(),
+        note: "Initial officer marked it impossible; following weekly officer completed the work.",
+      },
+      history: [
+        {
+          action: "submitted",
+          officerName: "Citizen",
+          officerRole: "citizen",
+          timestamp: new Date(now.getTime() - 5 * 24 * 3600000).toISOString(),
+          note: "Complaint registered by citizen.",
+        },
+        {
+          action: "forwarded",
+          officerName: "Road Admin Test",
+          officerRole: "department",
+          timestamp: new Date(now.getTime() - 4 * 24 * 3600000).toISOString(),
+          note: "Claimed the issue was outside current scope.",
+        },
+        {
+          action: "solved",
+          officerName: roadOfficer?.name || "Road Admin Test",
+          officerRole: "department",
+          timestamp: new Date(now.getTime() - 12 * 3600000).toISOString(),
+          note: "Resolved by next weekly officer after field verification.",
+        },
+      ],
+    },
+  ];
+
+  demoComplaints.forEach((complaint) => {
+    if (!store.complaints.find((item) => item.tokenNumber === complaint.tokenNumber)) {
+      store.complaints.push(complaint);
+    }
+  });
 }
 
 function writeStore(store) {

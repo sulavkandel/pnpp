@@ -10,6 +10,7 @@ const translations = {
       subtitle: "Officer access page",
       eyebrow: "अधिकृत लगइन",
       formTitle: "साप्ताहिक ड्यूटीमा रहेका अधिकृत मात्र",
+      departmentLoginHint: "आफ्नो Login ID र Password प्रयोग गरेर सिधै लगइन गर्नुहोस्। विभाग वा वडा विवरण स्वतः देखाइनेछ।",
       portalLabel: "पोर्टल छान्नुहोस्",
       divisionLabel: "महाशाखा छान्नुहोस्",
       sectionLabel: "साखा / युनिट छान्नुहोस्",
@@ -34,6 +35,7 @@ const translations = {
       subtitle: "Officer access page",
       eyebrow: "Officer login",
       formTitle: "Only officers on active weekly duty can sign in",
+      departmentLoginHint: "Sign in directly with your login ID and password. The system will detect your department or ward automatically.",
       portalLabel: "Select portal",
       divisionLabel: "Select division",
       sectionLabel: "Select section / unit",
@@ -200,7 +202,7 @@ if (loginForm && loginMessage) {
   const loginButton = loginForm.querySelector("button");
   loginButton?.addEventListener("click", async () => {
     const formData = new FormData(loginForm);
-    const officeType = pageRole === "department" ? document.getElementById("portal-select")?.value || "ward" : "";
+    const officeType = pageRole === "department" ? document.getElementById("portal-select")?.value || "" : "";
     const payload = {
       officeType,
       divisionName: pageRole === "department" && officeType === "department" ? document.getElementById("division-select")?.value || "" : "",

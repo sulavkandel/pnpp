@@ -159,6 +159,8 @@ function sanitizeOfficeAccount(account) {
     wardNumber: account.wardNumber || "",
     status: account.status || "active",
     assignmentWeeks: getEffectiveAssignmentWeeks(account),
+    activationStartAt: account.activationStartAt || null,
+    activationExpiresAt: account.activationExpiresAt || endOfCurrentWeek().toISOString(),
     currentWeekPoints: Number(account.currentWeekPoints || 0),
     allTimePoints: Number(account.allTimePoints || 0),
   };
@@ -171,6 +173,7 @@ function sanitizeDepartment(department) {
     name: department.name,
     type: department.type || "Mahashakha",
     wards: department.wards || [],
+    subDepartments: department.subDepartments || [],
     description: department.description || "",
     active: department.active !== false,
     createdAt: department.createdAt || null,
@@ -299,6 +302,14 @@ function startOfCurrentWeek() {
   date.setHours(0, 0, 0, 0);
   date.setDate(date.getDate() + diff);
   return date;
+}
+
+function endOfCurrentWeek() {
+  const start = startOfCurrentWeek();
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  return end;
 }
 
 function normalizeCategory(category) {
@@ -604,12 +615,16 @@ function buildOfficerDashboard(account, complaints, allAccounts) {
     ? complaints.filter((item) => String(item.wardNumber) === String(account.wardNumber))
     : complaints.filter((item) => item.divisionName === account.divisionName);
   const newComplaints = departmentComplaints.filter((item) =>
-    ["pending", "forwarded"].includes(item.status) && (!item.acceptedByOfficerId || item.assignedOfficerId === currentOfficerId));
+    item.status === "pending" && (!item.acceptedByOfficerId || item.assignedOfficerId === currentOfficerId));
+  const forwardedToMe = departmentComplaints.filter((item) =>
+    item.status === "forwarded" && (!item.acceptedByOfficerId || item.assignedOfficerId === currentOfficerId || isWithinOfficerOfficeScope(account, item)));
   const myAccepted = departmentComplaints.filter((item) =>
     item.assignedOfficerId === currentOfficerId && ["in_progress", "delayed", "pending_admin_verification"].includes(item.status));
   const forwardedOrClosed = departmentComplaints.filter((item) =>
-    item.assignedOfficerId === currentOfficerId && ["solved", "escalated"].includes(item.status));
-  const firstReviewAlerts = newComplaints.filter((item) => Date.now() - new Date(item.createdAt).getTime() > 12 * 3600000);
+    (item.assignedOfficerId === currentOfficerId && ["solved", "escalated"].includes(item.status))
+    || (item.history || []).some((entry) =>
+      entry.officerName === account.name && ["forwarded", "escalated", "solved"].includes(entry.action)));
+  const firstReviewAlerts = [...newComplaints, ...forwardedToMe].filter((item) => Date.now() - new Date(item.createdAt).getTime() > 12 * 3600000);
   const leaderboard = allAccounts
     .filter((item) => item.officeType === account.officeType && (
       account.officeType === "ward"
@@ -650,6 +665,7 @@ function buildOfficerDashboard(account, complaints, allAccounts) {
     },
     tabs: {
       newComplaints: newComplaints.map(complaintSummaryForOfficer),
+      forwardedToMe: forwardedToMe.map(complaintSummaryForOfficer),
       myAcceptedComplaints: myAccepted.map(complaintSummaryForOfficer),
       forwardedOrClosed: forwardedOrClosed.map(complaintSummaryForOfficer),
     },
@@ -832,10 +848,7 @@ function buildSolvedChart(complaints, departments) {
 }
 
 function buildOversightQueue(complaints) {
-  const officerReviewCandidates = complaints.filter((item) =>
-    item.status === "forwarded"
-    || item.status === "escalated"
-    || (item.history || []).some((entry) => ["forwarded", "escalated"].includes(entry.action)));
+  const officerReviewCandidates = complaints.filter((item) => item.officerActionReview?.status === "pending");
 
   return {
     escalated: complaints
@@ -844,7 +857,10 @@ function buildOversightQueue(complaints) {
     invalidPending: complaints
       .filter((item) => item.status === "pending_admin_verification")
       .map(complaintSummaryForOfficer),
-    officerActionReviews: officerReviewCandidates.map(complaintSummaryForOfficer),
+    officerActionReviews: officerReviewCandidates.map((complaint) => ({
+      ...complaintSummaryForOfficer(complaint),
+      reviewMeta: complaint.officerActionReview,
+    })),
   };
 }
 
@@ -872,6 +888,16 @@ function buildAdminDashboard(complaints, departments, officers, rotations) {
       officers: officers.length,
       activeRotations: activeRotations.length,
     },
+    officerGroups: {
+      departments: officers
+        .filter((item) => item.officeType === "department" && item.status !== "inactive")
+        .map((item) => sanitizeOfficeAccount(item))
+        .sort((a, b) => a.divisionName.localeCompare(b.divisionName) || a.name.localeCompare(b.name)),
+      wards: officers
+        .filter((item) => item.officeType === "ward" && item.status !== "inactive")
+        .map((item) => sanitizeOfficeAccount(item))
+        .sort((a, b) => Number(a.wardNumber) - Number(b.wardNumber) || a.name.localeCompare(b.name)),
+    },
     charts: {
       complaintsByDepartment: aggregateCounts(
         complaints.filter((item) => item.divisionName),
@@ -897,6 +923,7 @@ function buildOfficerCatalog(accounts, complaints) {
       allTimePoints: performance.allTimePoints,
       averageResponseTime: performance.averageResponseTime,
       complaintsCompletedThisWeek: performance.complaintsCompletedThisWeek,
+      activationExpiresAt: account.activationExpiresAt || endOfCurrentWeek().toISOString(),
     };
   }).sort((a, b) => b.currentWeekPoints - a.currentWeekPoints || a.name.localeCompare(b.name));
 }
@@ -919,6 +946,36 @@ async function applyPerformanceAdjustment(repositories, officerId, adjustment) {
   });
 
   return true;
+}
+
+async function applyOfficerActionReviewDecision(repositories, complaint, validated, comment) {
+  const reviewMeta = complaint.officerActionReview || null;
+  if (!reviewMeta) return;
+
+  if (validated) {
+    if (reviewMeta.priorOfficerId) {
+      await applyPerformanceAdjustment(repositories, reviewMeta.priorOfficerId, {
+        points: -15,
+        message: comment || "Admin validated officer action review. Automatic deduction applied.",
+      });
+    }
+
+    if (reviewMeta.resolvingOfficerId && reviewMeta.resolvingOfficerId !== reviewMeta.priorOfficerId) {
+      await applyPerformanceAdjustment(repositories, reviewMeta.resolvingOfficerId, {
+        points: 15,
+        message: comment || "Admin validated officer action review. Automatic reward applied.",
+      });
+    }
+  }
+
+  await repositories.complaints.updateComplaint(complaint.tokenNumber, {
+    officerActionReview: {
+      ...reviewMeta,
+      status: validated ? "validated" : "dismissed",
+      resolvedAt: new Date(),
+      adminComment: comment || "",
+    },
+  });
 }
 
 function buildCitizenDashboard(user, complaints) {
@@ -1421,9 +1478,21 @@ async function createServer({ repositories, runtime }) {
           const sectionName = String(body.sectionName || "").trim();
           const wardNumber = String(body.wardNumber || "").trim();
           const active = body.active !== false;
+          const activationStartAt = new Date();
+          const activationExpiresAt = endOfCurrentWeek();
 
           if (!name || !loginId || !password) {
             sendJson(res, 400, { success: false, message: "Name, login ID, and password are required." });
+            return;
+          }
+
+          if (officeType === "department" && (!departmentCode || !divisionName || !sectionName)) {
+            sendJson(res, 400, { success: false, message: "Department and sub-department are required for department officers." });
+            return;
+          }
+
+          if (officeType === "ward" && !wardNumber) {
+            sendJson(res, 400, { success: false, message: "Ward number is required for ward officers." });
             return;
           }
 
@@ -1447,6 +1516,8 @@ async function createServer({ repositories, runtime }) {
             passwordHash: hashPassword(password),
             status: active ? "active" : "inactive",
             assignmentWeeks: active ? [getCurrentWeekKey()] : [],
+            activationStartAt: active ? activationStartAt : null,
+            activationExpiresAt: active ? activationExpiresAt : null,
             currentWeekPoints: 0,
             allTimePoints: 0,
             performanceAdjustments: [],
@@ -1816,17 +1887,31 @@ async function createServer({ repositories, runtime }) {
         const nextWeeks = Array.isArray(body.assignmentWeeks)
           ? body.assignmentWeeks.map((item) => String(item).trim()).filter(Boolean)
           : getEffectiveAssignmentWeeks(officer);
+        const isActive = body.active === undefined ? officer.status === "active" : Boolean(body.active);
+        const nextOfficeType = body.officeType !== undefined ? String(body.officeType || officer.officeType).trim() : officer.officeType;
         const patch = {
+          role: nextOfficeType === "ward" ? "ward" : "department",
+          officeType: nextOfficeType,
           name: body.name !== undefined ? String(body.name || "").trim() : officer.name,
           loginId: requestedLoginId,
           email: body.email !== undefined ? String(body.email || "").trim() : officer.email || "",
           phone: body.phone !== undefined ? String(body.phone || "").trim() : officer.phone || "",
-          departmentCode: body.departmentCode !== undefined ? String(body.departmentCode || "").trim().toUpperCase() : officer.departmentCode || "",
-          divisionName: body.divisionName !== undefined ? String(body.divisionName || "").trim() : officer.divisionName || "",
-          sectionName: body.sectionName !== undefined ? String(body.sectionName || "").trim() : officer.sectionName || "",
-          wardNumber: body.wardNumber !== undefined ? String(body.wardNumber || "").trim() : officer.wardNumber || "",
-          status: body.active === undefined ? officer.status || "active" : (body.active ? "active" : "inactive"),
-          assignmentWeeks: body.active === false ? [] : (nextWeeks.length ? nextWeeks : [getCurrentWeekKey()]),
+          departmentCode: nextOfficeType === "department"
+            ? (body.departmentCode !== undefined ? String(body.departmentCode || "").trim().toUpperCase() : officer.departmentCode || "")
+            : "",
+          divisionName: nextOfficeType === "department"
+            ? (body.divisionName !== undefined ? String(body.divisionName || "").trim() : officer.divisionName || "")
+            : "",
+          sectionName: nextOfficeType === "department"
+            ? (body.sectionName !== undefined ? String(body.sectionName || "").trim() : officer.sectionName || "")
+            : "",
+          wardNumber: nextOfficeType === "ward"
+            ? (body.wardNumber !== undefined ? String(body.wardNumber || "").trim() : officer.wardNumber || "")
+            : "",
+          status: isActive ? "active" : "inactive",
+          assignmentWeeks: isActive ? (nextWeeks.length ? nextWeeks : [getCurrentWeekKey()]) : [],
+          activationStartAt: isActive ? (officer.activationStartAt || new Date()) : null,
+          activationExpiresAt: isActive ? (officer.activationExpiresAt || endOfCurrentWeek()) : null,
         };
 
         if (body.password) {
@@ -1855,20 +1940,8 @@ async function createServer({ repositories, runtime }) {
         const body = await readJsonBody(req);
         const action = String(body.action || "").trim();
         const comment = String(body.comment || "").trim();
-        const targetOfficeType = String(body.targetOfficeType || "").trim();
         const targetDivisionName = String(body.targetDivisionName || "").trim();
         const targetSectionName = String(body.targetSectionName || "").trim();
-        const targetWardNumber = String(body.targetWardNumber || "").trim();
-        const pointsAdjustments = Array.isArray(body.pointsAdjustments) ? body.pointsAdjustments : [];
-
-        for (const adjustment of pointsAdjustments) {
-          if (adjustment?.officerId) {
-            await applyPerformanceAdjustment(repositories, String(adjustment.officerId), {
-              points: Number(adjustment.points || 0),
-              message: String(adjustment.message || comment || "Admin performance adjustment."),
-            });
-          }
-        }
 
         if (action === "approve_invalid") {
           await repositories.complaints.updateComplaint(tokenNumber, {
@@ -1883,23 +1956,27 @@ async function createServer({ repositories, runtime }) {
             status: complaint.acceptedByOfficerId ? "in_progress" : "pending",
             validityVerified: false,
           });
-        } else if (action === "cannot_solve") {
+        } else if (action === "transfer_higher_level") {
           await repositories.complaints.updateComplaint(tokenNumber, {
             status: "cannot_solve",
             closureConfirmedAt: new Date(),
-            escalated: false,
+            escalated: true,
+            assignedDepartment: "Higher Level Authority",
+            assignedOfficeLabel: "Higher Level Authority",
+            forwardedTo: "Transferred to higher level authority",
+            forwardedToLabel: "Transferred to higher level authority",
           });
-        } else if (action === "reassign") {
-          const forwardingResult = targetOfficeType === "ward" && targetWardNumber
-            ? await assignSpecificOffice(repositories, {
-              officeType: "ward",
-              wardNumber: targetWardNumber,
-            })
-            : await assignSpecificOffice(repositories, {
-              officeType: "department",
-              divisionName: targetDivisionName,
-              sectionName: targetSectionName,
-            });
+        } else if (action === "transfer_department") {
+          if (!targetDivisionName || !targetSectionName) {
+            sendJson(res, 400, { success: false, message: "Target department and sub-department are required." });
+            return;
+          }
+
+          const forwardingResult = await assignSpecificOffice(repositories, {
+            officeType: "department",
+            divisionName: targetDivisionName,
+            sectionName: targetSectionName,
+          });
 
           await repositories.complaints.updateComplaint(tokenNumber, {
             status: "pending",
@@ -1918,20 +1995,15 @@ async function createServer({ repositories, runtime }) {
                   ? "Central Admin"
                   : `${forwardingResult.divisionName} / ${forwardingResult.sectionName}`,
             escalated: forwardingResult.officeType === "central_admin",
-            forwardedTo: "Reassigned by Central Admin",
-            forwardedToLabel: "Reassigned by Central Admin",
+            forwardedTo: "Transferred by Central Admin",
+            forwardedToLabel: "Transferred by Central Admin",
             acceptedAt: null,
             acceptedByOfficerId: "",
           });
-        } else if (action === "restore_in_progress") {
-          await repositories.complaints.updateComplaint(tokenNumber, {
-            status: "in_progress",
-            escalated: false,
-          });
-        } else if (action === "approve_forward") {
-          await repositories.complaints.updateComplaint(tokenNumber, {
-            escalated: false,
-          });
+        } else if (action === "validate_review") {
+          await applyOfficerActionReviewDecision(repositories, complaint, true, comment);
+        } else if (action === "dismiss_review") {
+          await applyOfficerActionReviewDecision(repositories, complaint, false, comment);
         } else {
           sendJson(res, 400, { success: false, message: "Invalid oversight action." });
           return;
@@ -2070,6 +2142,14 @@ async function createServer({ repositories, runtime }) {
           patch.pointsAwarded = pointsForComplaint(complaint);
         }
 
+        if (status === "solved" && complaint.officerActionReview?.status === "pending") {
+          patch.officerActionReview = {
+            ...complaint.officerActionReview,
+            resolvingOfficerId: actor.principalId,
+            resolvingOfficerName: actor.name,
+          };
+        }
+
         await repositories.complaints.updateComplaint(complaint.tokenNumber, patch);
         if (comment) {
           await appendCommentAndHistory(repositories, complaint, actor, comment, "public");
@@ -2174,6 +2254,18 @@ async function createServer({ repositories, runtime }) {
               ? "Escalated to Central Admin"
               : `Forwarded to ${forwardingResult.divisionName} / ${forwardingResult.sectionName}`;
 
+        const officerActionReview = actor.role === "admin"
+          ? complaint.officerActionReview || null
+          : {
+            status: "pending",
+            priorOfficerId: actor.principalId,
+            priorOfficerName: actor.name,
+            resolvingOfficerId: "",
+            resolvingOfficerName: "",
+            createdAt: new Date(),
+            note: comment || (escalateToCentralAdmin ? "Officer escalated complaint to central admin." : "Officer forwarded complaint to another office."),
+          };
+
         await repositories.complaints.updateComplaint(complaint.tokenNumber, {
           status: escalateToCentralAdmin ? "escalated" : "forwarded",
           officeType: forwardingResult.officeType,
@@ -2196,6 +2288,7 @@ async function createServer({ repositories, runtime }) {
           firstResponseAt: complaint.firstResponseAt || new Date(),
           acceptedAt: null,
           acceptedByOfficerId: "",
+          officerActionReview,
         });
 
         if (comment) {

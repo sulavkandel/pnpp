@@ -13,6 +13,8 @@ export const OfficeAccountModelShape = {
   wardNumber: "optional string",
   status: "active | inactive",
   assignmentWeeks: ["YYYY-WNN weekly duty keys"],
+  activationStartAt: "Date",
+  activationExpiresAt: "Date",
   currentWeekPoints: "number",
   allTimePoints: "number",
   performanceAdjustments: [

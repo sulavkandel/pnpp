@@ -56,6 +56,7 @@
 
             <div class="officer-sidebar-card">
               <button type="button" class="officer-side-link active" data-tab="new" id="tab-link-new">गुनासो पंक्ति</button>
+              <button type="button" class="officer-side-link" data-tab="forwarded" id="tab-link-forwarded">मलाई पठाइएका</button>
               <button type="button" class="officer-side-link" data-tab="accepted" id="tab-link-accepted">मेरो समाधान</button>
               <button type="button" class="officer-side-link" data-tab="closed" id="tab-link-closed">फर्वार्ड / बन्द</button>
               <button type="button" class="officer-side-link" data-tab="performance" id="tab-link-performance">मेरो रिपोर्ट</button>
@@ -93,6 +94,7 @@
 
             <div class="officer-tab-bar">
               <button type="button" class="department-filter-btn active" data-tab="new" id="tab-button-new">New Complaints</button>
+              <button type="button" class="department-filter-btn" data-tab="forwarded" id="tab-button-forwarded">Forwarded To Me</button>
               <button type="button" class="department-filter-btn" data-tab="accepted" id="tab-button-accepted">My Accepted Complaints</button>
               <button type="button" class="department-filter-btn" data-tab="closed" id="tab-button-closed">Forwarded / Closed</button>
               <button type="button" class="department-filter-btn" data-tab="performance" id="tab-button-performance">My Performance</button>
@@ -107,6 +109,18 @@
                   </div>
                 </div>
                 <div id="officer-new-list"></div>
+              </div>
+            </section>
+
+            <section class="officer-section" id="officer-section-forwarded">
+              <div class="officer-list-panel panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small" id="forwarded-complaints-eyebrow">मलाई पठाइएका गुनासो</p>
+                    <h3 id="forwarded-complaints-title">अन्य विभागबाट आएका गुनासो</h3>
+                  </div>
+                </div>
+                <div id="officer-forwarded-list"></div>
               </div>
             </section>
 
@@ -171,35 +185,65 @@
                     <option value="solved">Close as Resolved</option>
                   </select>
                 </label>
-                <label>
-                  <span id="review-eta-label">Estimated completion</span>
-                  <input type="datetime-local" id="review-eta-input" />
-                </label>
-                <label>
-                  <span id="review-comment-label">Reason / comment</span>
-                  <textarea id="review-comment-input" placeholder="Explain the action clearly"></textarea>
-                </label>
-                <label>
-                  <span id="review-forward-type-label">Forward target</span>
-                  <select id="review-forward-type-select">
-                    <option value="">No forwarding</option>
-                    <option value="department">Department</option>
-                    <option value="ward">Ward</option>
-                    <option value="central_admin">Central Admin</option>
-                  </select>
-                </label>
-                <label>
-                  <span id="review-forward-division-label">Division</span>
-                  <input type="text" id="review-forward-division-input" placeholder="Target division" />
-                </label>
-                <label>
-                  <span id="review-forward-section-label">Section / unit</span>
-                  <input type="text" id="review-forward-section-input" placeholder="Target section" />
-                </label>
-                <label>
-                  <span id="review-forward-ward-label">Ward number</span>
-                  <input type="text" id="review-forward-ward-input" placeholder="Target ward" />
-                </label>
+
+                <div class="officer-action-group" id="action-group-accept">
+                  <label>
+                    <span id="review-eta-label">Expected completion date</span>
+                    <input type="datetime-local" id="review-eta-input" />
+                  </label>
+                  <label>
+                    <span id="review-comment-label">Comment</span>
+                    <textarea id="review-comment-input" placeholder="Explain the action clearly"></textarea>
+                  </label>
+                </div>
+
+                <div class="officer-action-group hidden" id="action-group-forward">
+                  <label>
+                    <span id="review-forward-division-label">Forward target department</span>
+                    <select id="review-forward-division-select"></select>
+                  </label>
+                  <label>
+                    <span id="review-forward-section-label">Forward target sub department</span>
+                    <select id="review-forward-section-select"></select>
+                  </label>
+                  <label class="officer-action-group-span">
+                    <span id="review-forward-comment-label">Comment</span>
+                    <textarea id="review-forward-comment-input" placeholder="Why is this being forwarded?"></textarea>
+                  </label>
+                </div>
+
+                <div class="officer-action-group hidden" id="action-group-escalate">
+                  <label class="officer-action-group-span">
+                    <span id="review-escalate-comment-label">Comment</span>
+                    <textarea id="review-escalate-comment-input" placeholder="Explain why this needs central admin attention"></textarea>
+                  </label>
+                </div>
+
+                <div class="officer-action-group hidden" id="action-group-invalid">
+                  <label class="officer-action-group-span">
+                    <span id="review-invalid-comment-label">Comment</span>
+                    <textarea id="review-invalid-comment-input" placeholder="Explain why this complaint is invalid"></textarea>
+                  </label>
+                </div>
+
+                <div class="officer-action-group hidden" id="action-group-delay">
+                  <label>
+                    <span id="review-delay-eta-label">Rescheduled completion date</span>
+                    <input type="datetime-local" id="review-delay-eta-input" />
+                  </label>
+                  <label>
+                    <span id="review-delay-comment-label">Comment</span>
+                    <textarea id="review-delay-comment-input" placeholder="Explain the reason for delay"></textarea>
+                  </label>
+                </div>
+
+                <div class="officer-action-group hidden" id="action-group-solved">
+                  <label class="officer-action-group-span">
+                    <span id="review-resolve-comment-label">Comment</span>
+                    <textarea id="review-resolve-comment-input" placeholder="Describe how the complaint was resolved"></textarea>
+                  </label>
+                </div>
+
                 <div class="action-strip">
                   <button type="button" class="button primary" id="officer-review-submit-button">Submit Review</button>
                 </div>

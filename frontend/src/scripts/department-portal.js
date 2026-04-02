@@ -6,67 +6,78 @@ if (!storedDepartment || !departmentAuthToken) {
   window.location.replace("./department-login.html");
 }
 
-const officer = storedDepartment ? JSON.parse(storedDepartment) : null;
+const officer = JSON.parse(storedDepartment);
 let currentLanguage = "ne";
 let activeTab = "new";
 let dashboard = null;
 let selectedComplaintToken = "";
 
+const departmentCatalog = [
+  { code: "ADMIN", division: "Administration", sections: ["Admin Section", "Inspection (Security)", "Fire & Emergency"] },
+  { code: "FIN", division: "Finance & Revenue", sections: ["Internal Audit", "Procurement", "Revenue/Tax Units"] },
+  { code: "INFRA", division: "Infrastructure Development", sections: ["Road Section", "Bridge Section", "Buildings", "Water & Sewer"] },
+  { code: "URBAN", division: "Urban Dev & Environment", sections: ["Tourism", "Sanitation/Waste", "Greenery Units"] },
+  { code: "PLANIT", division: "Planning, Monitoring & IT", sections: ["IT Section", "Data & Statistics", "Documentation"] },
+  { code: "SOCIAL", division: "Social Development", sections: ["Women/Child Program", "Social Security", "Community Development"] },
+  { code: "HEALTH", division: "Health", sections: ["Health Services / Health Center Coordination"] },
+  { code: "EDU", division: "Education", sections: ["School Management / Education Programs"] },
+  { code: "ECON", division: "Economic Development", sections: ["Business Promotion", "Employment", "Agri & Livestock"] },
+  { code: "LEGAL", division: "Legal", sections: ["Legal Advice / Dispute Management"] },
+];
+
 const translations = {
   ne: {
     topTitle: "जनसेवा · अधिकृत पोर्टल",
-    weekLabel: "साप्ताहिक रोटेसन: {week}",
+    weekLabel: "साप्ताहिक कार्य अवधि: {week}",
     gov: "पोखरा महानगरपालिका",
-    main: "Officer Portal",
-    sub: "गुनासो समीक्षा, स्वीकृति, फर्वार्ड र प्रदर्शन अनुगमन",
+    main: "अधिकृत पोर्टल",
+    sub: "गुनासो समीक्षा, कार्य प्रगति र विभागीय समन्वय",
     logout: "लगआउट",
-    alert: "{count} गुनासोमा पहिलो समीक्षा बाँकी छ। २४ घण्टाभित्र समीक्षा गर्नुहोस्।",
-    noAlert: "यस हप्ताका सबै नयाँ गुनासो समयमै समीक्षा गरिएको छ।",
-    tabNew: "गुनासो पंक्ति",
-    tabAccepted: "मेरो समाधान",
+    alert: "{count} गुनासोमा प्रारम्भिक समीक्षा बाँकी छ।",
+    noAlert: "यस हप्ताका सबै नयाँ गुनासो समयमै समीक्षा भएका छन्।",
+    tabNew: "नयाँ गुनासो",
+    tabForwarded: "मलाई पठाइएका",
+    tabAccepted: "प्रगतिमा",
     tabClosed: "फर्वार्ड / बन्द",
     tabPerformance: "मेरो रिपोर्ट",
     pointsEyebrow: "मेरो अंक",
     pointsCopy: "Performance points",
     solvedMini: "समाधान",
     pendingMini: "बाँकी",
-    recentActivity: "Recent activity",
-    leaderboard: "Points leaderboard",
+    recentActivity: "हालैको गतिविधि",
+    leaderboard: "अंक तालिका",
     kpiReceived: "यस हप्ता प्राप्त",
+    kpiForwarded: "मलाई पठाइएका",
     kpiCompleted: "यस हप्ता समाधान",
-    kpiResponse: "औसत प्रतिक्रिया समय",
+    kpiResponse: "औसत प्रतिक्रिया",
     kpiPoints: "यस हप्ताको अंक",
     newEyebrow: "नयाँ गुनासो",
-    newTitle: "२४ घण्टाभित्र प्रारम्भिक समीक्षा आवश्यक",
-    acceptedEyebrow: "मेरो स्वीकृत गुनासो",
-    acceptedTitle: "प्रगतिमा रहेका कार्य",
+    newTitle: "२४ घण्टाभित्र प्रारम्भिक समीक्षा गर्नुहोस्",
+    forwardedEyebrow: "मलाई पठाइएका गुनासो",
+    forwardedTitle: "अन्य विभागबाट आएका गुनासो",
+    acceptedEyebrow: "प्रगतिमा रहेका गुनासो",
+    acceptedTitle: "स्वीकृत र कार्यरत गुनासो",
     closedEyebrow: "फर्वार्ड / बन्द",
-    closedTitle: "बन्द गरिएका वा माथि पठाइएका गुनासो",
-    performanceEyebrow: "Officer Performance",
+    closedTitle: "तपाईंले फर्वार्ड वा बन्द गरेका गुनासो",
+    performanceEyebrow: "अधिकृत प्रदर्शन",
     performanceTitle: "अंक, इतिहास र साप्ताहिक रिपोर्ट",
-    reportButton: "Download Weekly Report",
-    reviewEyebrow: "Complaint Review",
-    reviewTitle: "Review and handle complaint",
-    reviewAction: "Action",
-    reviewEta: "Estimated completion",
-    reviewComment: "Reason / comment",
-    reviewForwardType: "Forward target",
-    reviewForwardDivision: "Division",
-    reviewForwardSection: "Section / unit",
-    reviewForwardWard: "Ward number",
-    reviewSubmit: "Submit Review",
+    reportButton: "साप्ताहिक रिपोर्ट",
+    reviewEyebrow: "गुनासो समीक्षा",
+    reviewTitle: "कार्य चयन गरी समीक्षा पठाउनुहोस्",
+    reviewAction: "कार्य छान्नुहोस्",
+    accept: "स्वीकार गर्नुहोस्",
+    forward: "फर्वार्ड गर्नुहोस्",
+    escalate: "केन्द्रीय प्रशासनमा पठाउनुहोस्",
+    invalid: "अवैध चिन्ह लगाउनुहोस्",
+    delay: "ढिलाइ देखाउनुहोस्",
+    resolve: "समाधान गरेर बन्द गर्नुहोस्",
+    expectedDate: "अपेक्षित सम्पन्न मिति",
+    comment: "टिप्पणी",
+    forwardDepartment: "लक्ष्य विभाग",
+    forwardSection: "लक्ष्य उप-विभाग",
+    reviewSubmit: "समीक्षा पठाउनुहोस्",
     actionSuccess: "कार्य सफलतापूर्वक अद्यावधिक भयो।",
     actionFailed: "कार्य पूरा गर्न सकिएन।",
-    accept: "Accept",
-    forward: "Forward",
-    escalate: "Escalate",
-    invalid: "Mark Invalid",
-    delay: "Delay",
-    resolve: "Close as Resolved",
-    noForward: "No forwarding",
-    department: "Department",
-    ward: "Ward",
-    centralAdmin: "Central Admin",
     noComplaints: "यस सूचीमा हाल गुनासो छैन।",
     noSelection: "सूचीबाट गुनासो छान्नुहोस्।",
     urgencyHigh: "अत्यावश्यक",
@@ -78,34 +89,38 @@ const translations = {
     status_escalated: "एस्केलेट गरिएको",
     status_pending_admin_verification: "प्रशासन पुष्टि बाँकी",
     reviewButton: "समीक्षा गर्नुहोस्",
-    pointsCurrent: "Current points",
-    pointsWeek: "Points earned this week",
-    pointsAll: "All-time points",
-    feedbackTitle: "Central admin feedback",
-    performanceHistoryTitle: "Handled complaint history",
-    noFeedback: "अहिलेसम्म कुनै प्रशासनिक टिप्पणी छैन।",
+    pointsCurrent: "हालको अंक",
+    pointsWeek: "यस हप्ताको अंक",
+    pointsAll: "कुल अंक",
+    feedbackTitle: "केन्द्रीय प्रशासन प्रतिक्रिया",
+    noFeedback: "अहिलेसम्म कुनै प्रतिक्रिया छैन।",
     officerNameLabel: "अधिकृत",
-    departmentLabel: "विभाग",
+    departmentLabel: "कार्यालय",
     citizenLabel: "नागरिक",
     locationLabel: "स्थान",
     attachmentsLabel: "संलग्न फाइल",
     timelineLabel: "समयरेखा",
     commentsLabel: "टिप्पणीहरू",
-    invalidNeedsReason: "Invalid भनेर पठाउँदा कारण आवश्यक छ।",
-    forwardNeedsTarget: "Forward गर्दा लक्ष्य छान्नुहोस्।",
-    downloadHint: "Weekly report print dialog opened. Save as PDF from the browser.",
+    invalidNeedsReason: "अवैध चिन्ह लगाउँदा टिप्पणी आवश्यक छ।",
+    forwardNeedsTarget: "फर्वार्ड गर्न लक्ष्य विभाग र उप-विभाग छान्नुहोस्।",
+    acceptedNeedsEta: "स्वीकार गर्दा अपेक्षित सम्पन्न मिति आवश्यक छ।",
+    delayNeedsEta: "ढिलाइ गर्दा नयाँ मिति आवश्यक छ।",
+    escalateNeedsComment: "एस्केलेट गर्दा टिप्पणी आवश्यक छ।",
+    resolveNeedsComment: "समाधान गर्दा टिप्पणी आवश्यक छ।",
+    downloadHint: "Print dialog opened. Save as PDF if needed.",
   },
   en: {
     topTitle: "JanaSewa · Officer Portal",
-    weekLabel: "Weekly rotation: {week}",
+    weekLabel: "Weekly duty: {week}",
     gov: "Pokhara Metropolitan City",
     main: "Officer Portal",
-    sub: "Review, accept, forward, escalate, and track officer performance",
+    sub: "Complaint review, work progress, and department coordination",
     logout: "Logout",
-    alert: "{count} complaints are still awaiting first review. Review them within 24 hours.",
-    noAlert: "All new complaints for this week have been reviewed on time.",
-    tabNew: "Complaint Queue",
-    tabAccepted: "My Accepted",
+    alert: "{count} complaints are still waiting for first review.",
+    noAlert: "All new complaints have been reviewed on time this week.",
+    tabNew: "New Complaints",
+    tabForwarded: "Forwarded To Me",
+    tabAccepted: "In Progress",
     tabClosed: "Forwarded / Closed",
     tabPerformance: "My Performance",
     pointsEyebrow: "My points",
@@ -115,42 +130,39 @@ const translations = {
     recentActivity: "Recent activity",
     leaderboard: "Points leaderboard",
     kpiReceived: "Received this week",
+    kpiForwarded: "Forwarded to me",
     kpiCompleted: "Completed this week",
-    kpiResponse: "Average response time",
-    kpiPoints: "This week's points",
+    kpiResponse: "Average response",
+    kpiPoints: "Weekly points",
     newEyebrow: "New complaints",
-    newTitle: "Initial review required within 24 hours",
-    acceptedEyebrow: "My accepted complaints",
-    acceptedTitle: "Work currently in progress",
-    closedEyebrow: "Forwarded / closed",
-    closedTitle: "Closed or escalated complaints",
-    performanceEyebrow: "Officer Performance",
+    newTitle: "Complete initial review within 24 hours",
+    forwardedEyebrow: "Forwarded to me",
+    forwardedTitle: "Complaints received from other departments",
+    acceptedEyebrow: "In-progress complaints",
+    acceptedTitle: "Accepted complaints under work",
+    closedEyebrow: "Forwarded / Closed",
+    closedTitle: "Complaints you forwarded or closed",
+    performanceEyebrow: "Officer performance",
     performanceTitle: "Points, history, and weekly report",
-    reportButton: "Download Weekly Report",
-    reviewEyebrow: "Complaint Review",
-    reviewTitle: "Review and handle complaint",
-    reviewAction: "Action",
-    reviewEta: "Estimated completion",
-    reviewComment: "Reason / comment",
-    reviewForwardType: "Forward target",
-    reviewForwardDivision: "Division",
-    reviewForwardSection: "Section / unit",
-    reviewForwardWard: "Ward number",
-    reviewSubmit: "Submit Review",
-    actionSuccess: "Action updated successfully.",
-    actionFailed: "Could not complete the action.",
+    reportButton: "Weekly report",
+    reviewEyebrow: "Complaint review",
+    reviewTitle: "Choose an action and submit review",
+    reviewAction: "Select action",
     accept: "Accept",
     forward: "Forward",
-    escalate: "Escalate",
+    escalate: "Escalate to Central Admin",
     invalid: "Mark Invalid",
     delay: "Delay",
     resolve: "Close as Resolved",
-    noForward: "No forwarding",
-    department: "Department",
-    ward: "Ward",
-    centralAdmin: "Central Admin",
+    expectedDate: "Expected completion date",
+    comment: "Comment",
+    forwardDepartment: "Target department",
+    forwardSection: "Target sub department",
+    reviewSubmit: "Submit Review",
+    actionSuccess: "Action updated successfully.",
+    actionFailed: "Could not complete the action.",
     noComplaints: "No complaints in this list right now.",
-    noSelection: "Select a complaint from the queue.",
+    noSelection: "Select a complaint from the list.",
     urgencyHigh: "Urgent",
     status_pending: "Under Review",
     status_in_progress: "In Progress",
@@ -164,18 +176,21 @@ const translations = {
     pointsWeek: "Points earned this week",
     pointsAll: "All-time points",
     feedbackTitle: "Central admin feedback",
-    performanceHistoryTitle: "Handled complaint history",
     noFeedback: "No admin feedback yet.",
     officerNameLabel: "Officer",
-    departmentLabel: "Department",
+    departmentLabel: "Office",
     citizenLabel: "Citizen",
     locationLabel: "Location",
     attachmentsLabel: "Attachments",
     timelineLabel: "Timeline",
     commentsLabel: "Comments",
-    invalidNeedsReason: "A reason is required when marking a complaint invalid.",
-    forwardNeedsTarget: "Choose a forwarding target.",
-    downloadHint: "Weekly report opened in print mode. Save as PDF from the browser.",
+    invalidNeedsReason: "A comment is required when marking invalid.",
+    forwardNeedsTarget: "Choose the target department and sub department.",
+    acceptedNeedsEta: "Expected completion date is required when accepting.",
+    delayNeedsEta: "A new completion date is required for delay.",
+    escalateNeedsComment: "A comment is required when escalating.",
+    resolveNeedsComment: "A resolution comment is required.",
+    downloadHint: "Print dialog opened. Save as PDF if needed.",
   },
 };
 
@@ -191,6 +206,7 @@ function statusClass(status) {
   if (status === "solved") return "department-badge-green";
   if (status === "delayed" || status === "pending_admin_verification") return "department-badge-red";
   if (status === "in_progress") return "department-badge-amber";
+  if (status === "forwarded" || status === "escalated") return "department-badge-blue";
   return "department-badge-blue";
 }
 
@@ -216,9 +232,7 @@ function urgencyBadge(complaint) {
 
 async function fetchDashboard() {
   const response = await fetch(`${apiBase}/api/officer/dashboard`, {
-    headers: {
-      Authorization: `Bearer ${departmentAuthToken}`,
-    },
+    headers: { Authorization: `Bearer ${departmentAuthToken}` },
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.message || t().actionFailed);
@@ -227,13 +241,20 @@ async function fetchDashboard() {
 
 async function fetchComplaint(tokenNumber) {
   const response = await fetch(`${apiBase}/api/complaints/${tokenNumber}`, {
-    headers: {
-      Authorization: `Bearer ${departmentAuthToken}`,
-    },
+    headers: { Authorization: `Bearer ${departmentAuthToken}` },
   });
   const result = await response.json();
   if (!response.ok) throw new Error(result.message || t().actionFailed);
   return result.complaint;
+}
+
+function getAllReviewableComplaints() {
+  return [
+    ...(dashboard?.tabs.newComplaints || []),
+    ...(dashboard?.tabs.forwardedToMe || []),
+    ...(dashboard?.tabs.myAcceptedComplaints || []),
+    ...(dashboard?.tabs.forwardedOrClosed || []),
+  ];
 }
 
 function complaintCard(complaint) {
@@ -269,6 +290,23 @@ function renderList(targetId, complaints) {
     : `<div class="admin-list-card"><p>${t().noComplaints}</p></div>`;
 }
 
+function fillForwardDepartments() {
+  const divisionSelect = document.getElementById("review-forward-division-select");
+  const sectionSelect = document.getElementById("review-forward-section-select");
+  if (!divisionSelect || !sectionSelect) return;
+
+  const currentDivision = divisionSelect.value;
+  divisionSelect.innerHTML = `<option value="">${t().forwardDepartment}</option>${departmentCatalog
+    .map((department) => `<option value="${department.division}" ${currentDivision === department.division ? "selected" : ""}>${department.division}</option>`)
+    .join("")}`;
+
+  const selected = departmentCatalog.find((department) => department.division === divisionSelect.value) || departmentCatalog[0];
+  const currentSection = sectionSelect.value;
+  sectionSelect.innerHTML = `<option value="">${t().forwardSection}</option>${(selected?.sections || [])
+    .map((section) => `<option value="${section}" ${currentSection === section ? "selected" : ""}>${section}</option>`)
+    .join("")}`;
+}
+
 function renderStatic() {
   document.documentElement.lang = currentLanguage;
   document.getElementById("officer-top-title").textContent = t().topTitle;
@@ -278,6 +316,7 @@ function renderStatic() {
   document.getElementById("dept-subtitle").textContent = t().sub;
   document.getElementById("department-logout-button").textContent = t().logout;
   document.getElementById("tab-link-new").textContent = t().tabNew;
+  document.getElementById("tab-link-forwarded").textContent = t().tabForwarded;
   document.getElementById("tab-link-accepted").textContent = t().tabAccepted;
   document.getElementById("tab-link-closed").textContent = t().tabClosed;
   document.getElementById("tab-link-performance").textContent = t().tabPerformance;
@@ -287,12 +326,15 @@ function renderStatic() {
   document.getElementById("officer-pending-mini-label").textContent = t().pendingMini;
   document.getElementById("recent-activity-eyebrow").textContent = t().recentActivity;
   document.getElementById("leaderboard-eyebrow").textContent = t().leaderboard;
-  document.getElementById("tab-button-new").textContent = currentLanguage === "ne" ? "New Complaints" : "New Complaints";
-  document.getElementById("tab-button-accepted").textContent = currentLanguage === "ne" ? "My Accepted Complaints" : "My Accepted Complaints";
-  document.getElementById("tab-button-closed").textContent = currentLanguage === "ne" ? "Forwarded / Closed" : "Forwarded / Closed";
-  document.getElementById("tab-button-performance").textContent = currentLanguage === "ne" ? "My Performance" : "My Performance";
+  document.getElementById("tab-button-new").textContent = t().tabNew;
+  document.getElementById("tab-button-forwarded").textContent = t().tabForwarded;
+  document.getElementById("tab-button-accepted").textContent = t().tabAccepted;
+  document.getElementById("tab-button-closed").textContent = t().tabClosed;
+  document.getElementById("tab-button-performance").textContent = t().tabPerformance;
   document.getElementById("new-complaints-eyebrow").textContent = t().newEyebrow;
   document.getElementById("new-complaints-title").textContent = t().newTitle;
+  document.getElementById("forwarded-complaints-eyebrow").textContent = t().forwardedEyebrow;
+  document.getElementById("forwarded-complaints-title").textContent = t().forwardedTitle;
   document.getElementById("accepted-complaints-eyebrow").textContent = t().acceptedEyebrow;
   document.getElementById("accepted-complaints-title").textContent = t().acceptedTitle;
   document.getElementById("closed-complaints-eyebrow").textContent = t().closedEyebrow;
@@ -303,12 +345,16 @@ function renderStatic() {
   document.getElementById("review-eyebrow").textContent = t().reviewEyebrow;
   document.getElementById("review-title").textContent = t().reviewTitle;
   document.getElementById("review-status-label").textContent = t().reviewAction;
-  document.getElementById("review-eta-label").textContent = t().reviewEta;
-  document.getElementById("review-comment-label").textContent = t().reviewComment;
-  document.getElementById("review-forward-type-label").textContent = t().reviewForwardType;
-  document.getElementById("review-forward-division-label").textContent = t().reviewForwardDivision;
-  document.getElementById("review-forward-section-label").textContent = t().reviewForwardSection;
-  document.getElementById("review-forward-ward-label").textContent = t().reviewForwardWard;
+  document.getElementById("review-eta-label").textContent = t().expectedDate;
+  document.getElementById("review-comment-label").textContent = t().comment;
+  document.getElementById("review-forward-division-label").textContent = t().forwardDepartment;
+  document.getElementById("review-forward-section-label").textContent = t().forwardSection;
+  document.getElementById("review-forward-comment-label").textContent = t().comment;
+  document.getElementById("review-escalate-comment-label").textContent = t().comment;
+  document.getElementById("review-invalid-comment-label").textContent = t().comment;
+  document.getElementById("review-delay-eta-label").textContent = t().expectedDate;
+  document.getElementById("review-delay-comment-label").textContent = t().comment;
+  document.getElementById("review-resolve-comment-label").textContent = t().comment;
   document.getElementById("officer-review-submit-button").textContent = t().reviewSubmit;
 
   const statusSelect = document.getElementById("review-status-select");
@@ -319,15 +365,12 @@ function renderStatic() {
   statusSelect.options[4].textContent = t().delay;
   statusSelect.options[5].textContent = t().resolve;
 
-  const forwardSelect = document.getElementById("review-forward-type-select");
-  forwardSelect.options[0].textContent = t().noForward;
-  forwardSelect.options[1].textContent = t().department;
-  forwardSelect.options[2].textContent = t().ward;
-  forwardSelect.options[3].textContent = t().centralAdmin;
-
   document.querySelectorAll("[data-lang]").forEach((button) => {
     button.classList.toggle("active", button.dataset.lang === currentLanguage);
   });
+
+  fillForwardDepartments();
+  syncActionGroups();
 }
 
 function renderHeader() {
@@ -336,7 +379,7 @@ function renderHeader() {
   document.getElementById("department-avatar").textContent = dashboard.header.officerName.split(" ").map((part) => part[0] || "").join("").slice(0, 2).toUpperCase();
   document.getElementById("officer-points-total").textContent = String(dashboard.header.currentWeekPoints);
   document.getElementById("officer-solved-mini").textContent = String(dashboard.kpis.complaintsCompletedThisWeek);
-  document.getElementById("officer-pending-mini").textContent = String(dashboard.tabs.myAcceptedComplaints.length);
+  document.getElementById("officer-pending-mini").textContent = String((dashboard.tabs.myAcceptedComplaints || []).length);
   document.getElementById("officer-alert-banner").textContent = dashboard.alerts.pendingFirstReviewCount
     ? t().alert.replace("{count}", dashboard.alerts.pendingFirstReviewCount)
     : t().noAlert;
@@ -345,6 +388,7 @@ function renderHeader() {
 function renderKpis() {
   document.getElementById("officer-summary-row").innerHTML = [
     [t().kpiReceived, dashboard.kpis.complaintsReceivedThisWeek, "is-red"],
+    [t().kpiForwarded, (dashboard.tabs.forwardedToMe || []).length, "is-blue"],
     [t().kpiCompleted, dashboard.kpis.complaintsCompletedThisWeek, "is-green"],
     [t().kpiResponse, dashboard.kpis.averageResponseTime, "is-amber"],
     [t().kpiPoints, dashboard.header.currentWeekPoints, "is-blue"],
@@ -378,9 +422,10 @@ function renderSidebar() {
 }
 
 function renderTabs() {
-  renderList("officer-new-list", dashboard.tabs.newComplaints);
-  renderList("officer-accepted-list", dashboard.tabs.myAcceptedComplaints);
-  renderList("officer-closed-list", dashboard.tabs.forwardedOrClosed);
+  renderList("officer-new-list", dashboard.tabs.newComplaints || []);
+  renderList("officer-forwarded-list", dashboard.tabs.forwardedToMe || []);
+  renderList("officer-accepted-list", dashboard.tabs.myAcceptedComplaints || []);
+  renderList("officer-closed-list", dashboard.tabs.forwardedOrClosed || []);
 }
 
 function renderPerformance() {
@@ -410,9 +455,9 @@ function renderPerformance() {
 }
 
 async function renderSelectedComplaint() {
-  const complaint = [...dashboard.tabs.newComplaints, ...dashboard.tabs.myAcceptedComplaints, ...dashboard.tabs.forwardedOrClosed]
-    .find((item) => item.tokenNumber === selectedComplaintToken);
+  const complaint = getAllReviewableComplaints().find((item) => item.tokenNumber === selectedComplaintToken);
   const node = document.getElementById("officer-selected-complaint");
+  if (!node) return;
 
   if (!complaint) {
     node.innerHTML = `<div class="detail-card"><p>${t().noSelection}</p></div>`;
@@ -422,7 +467,9 @@ async function renderSelectedComplaint() {
   let detailed = complaint;
   try {
     detailed = await fetchComplaint(complaint.tokenNumber);
-  } catch {}
+  } catch {
+    detailed = complaint;
+  }
 
   const attachments = detailed.attachments?.length
     ? detailed.attachments.map((item) => `<a class="track-link" href="${item.dataUrl}" download="${item.name}">${item.name}</a>`).join("<br />")
@@ -466,11 +513,6 @@ function bindReviewButtons() {
   });
 }
 
-async function loadDashboard() {
-  dashboard = await fetchDashboard();
-  selectedComplaintToken ||= dashboard.tabs.newComplaints[0]?.tokenNumber || dashboard.tabs.myAcceptedComplaints[0]?.tokenNumber || "";
-}
-
 function setActiveTab(tab) {
   activeTab = tab;
   document.querySelectorAll(".officer-section").forEach((section) => {
@@ -479,6 +521,32 @@ function setActiveTab(tab) {
   document.querySelectorAll("[data-tab]").forEach((button) => {
     button.classList.toggle("active", button.dataset.tab === tab);
   });
+}
+
+function syncActionGroups() {
+  const action = document.getElementById("review-status-select")?.value || "in_progress";
+  ["accept", "forward", "escalate", "invalid", "delay", "solved"].forEach((group) => {
+    document.getElementById(`action-group-${group}`)?.classList.add("hidden");
+  });
+
+  const map = {
+    in_progress: "accept",
+    forward: "forward",
+    escalate: "escalate",
+    pending_admin_verification: "invalid",
+    delayed: "delay",
+    solved: "solved",
+  };
+
+  document.getElementById(`action-group-${map[action]}`)?.classList.remove("hidden");
+}
+
+async function loadDashboard() {
+  dashboard = await fetchDashboard();
+  selectedComplaintToken ||= dashboard.tabs.newComplaints[0]?.tokenNumber
+    || dashboard.tabs.forwardedToMe[0]?.tokenNumber
+    || dashboard.tabs.myAcceptedComplaints[0]?.tokenNumber
+    || "";
 }
 
 async function renderAll() {
@@ -493,74 +561,112 @@ async function renderAll() {
   setActiveTab(activeTab);
 }
 
+async function patchStatus(status, comment) {
+  const response = await fetch(`${apiBase}/api/complaints/${selectedComplaintToken}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${departmentAuthToken}`,
+    },
+    body: JSON.stringify({ status, comment }),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.message || t().actionFailed);
+}
+
+async function patchEta(estimatedCompletionAt) {
+  const response = await fetch(`${apiBase}/api/complaints/${selectedComplaintToken}/eta`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${departmentAuthToken}`,
+    },
+    body: JSON.stringify({ estimatedCompletionAt }),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.message || t().actionFailed);
+}
+
+async function patchForward({ targetDivisionName, targetSectionName, comment, escalateToCentralAdmin }) {
+  const response = await fetch(`${apiBase}/api/complaints/${selectedComplaintToken}/forward`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${departmentAuthToken}`,
+    },
+    body: JSON.stringify({
+      targetOfficeType: "department",
+      targetDivisionName,
+      targetSectionName,
+      targetWardNumber: "",
+      comment,
+      escalateToCentralAdmin,
+    }),
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.message || t().actionFailed);
+}
+
+function clearActionInputs() {
+  [
+    "review-eta-input",
+    "review-comment-input",
+    "review-forward-comment-input",
+    "review-escalate-comment-input",
+    "review-invalid-comment-input",
+    "review-delay-eta-input",
+    "review-delay-comment-input",
+    "review-resolve-comment-input",
+  ].forEach((id) => {
+    const node = document.getElementById(id);
+    if (node) node.value = "";
+  });
+}
+
 async function submitReview() {
   if (!selectedComplaintToken) return;
 
   const action = document.getElementById("review-status-select").value;
-  const eta = document.getElementById("review-eta-input").value;
-  const comment = document.getElementById("review-comment-input").value.trim();
-  const forwardType = document.getElementById("review-forward-type-select").value;
-  const targetDivisionName = document.getElementById("review-forward-division-input").value.trim();
-  const targetSectionName = document.getElementById("review-forward-section-input").value.trim();
-  const targetWardNumber = document.getElementById("review-forward-ward-input").value.trim();
   const messageNode = document.getElementById("officer-action-message");
   messageNode.className = "form-message";
   messageNode.textContent = "";
 
   try {
-    if (action === "forward") {
-      if (!forwardType) throw new Error(t().forwardNeedsTarget);
-      const response = await fetch(`${apiBase}/api/complaints/${selectedComplaintToken}/forward`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${departmentAuthToken}`,
-        },
-        body: JSON.stringify({
-          targetOfficeType: forwardType === "central_admin" ? "" : forwardType,
-          targetDivisionName,
-          targetSectionName,
-          targetWardNumber,
-          comment,
-          escalateToCentralAdmin: forwardType === "central_admin",
-        }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || t().actionFailed);
-    } else {
-      if (action === "pending_admin_verification" && !comment) {
-        throw new Error(t().invalidNeedsReason);
-      }
-      const response = await fetch(`${apiBase}/api/complaints/${selectedComplaintToken}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${departmentAuthToken}`,
-        },
-        body: JSON.stringify({
-          status: action,
-          comment,
-        }),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || t().actionFailed);
-
-      if (eta && ["in_progress", "delayed", "solved"].includes(action)) {
-        await fetch(`${apiBase}/api/complaints/${selectedComplaintToken}/eta`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${departmentAuthToken}`,
-          },
-          body: JSON.stringify({
-            estimatedCompletionAt: eta,
-          }),
-        });
-      }
+    if (action === "in_progress") {
+      const eta = document.getElementById("review-eta-input").value;
+      const comment = document.getElementById("review-comment-input").value.trim();
+      if (!eta) throw new Error(t().acceptedNeedsEta);
+      await patchStatus("in_progress", comment);
+      await patchEta(eta);
+    } else if (action === "forward") {
+      const targetDivisionName = document.getElementById("review-forward-division-select").value;
+      const targetSectionName = document.getElementById("review-forward-section-select").value;
+      const comment = document.getElementById("review-forward-comment-input").value.trim();
+      if (!targetDivisionName || !targetSectionName) throw new Error(t().forwardNeedsTarget);
+      await patchForward({ targetDivisionName, targetSectionName, comment, escalateToCentralAdmin: false });
+    } else if (action === "escalate") {
+      const comment = document.getElementById("review-escalate-comment-input").value.trim();
+      if (!comment) throw new Error(t().escalateNeedsComment);
+      await patchForward({ targetDivisionName: "", targetSectionName: "", comment, escalateToCentralAdmin: true });
+    } else if (action === "pending_admin_verification") {
+      const comment = document.getElementById("review-invalid-comment-input").value.trim();
+      if (!comment) throw new Error(t().invalidNeedsReason);
+      await patchStatus("pending_admin_verification", comment);
+    } else if (action === "delayed") {
+      const eta = document.getElementById("review-delay-eta-input").value;
+      const comment = document.getElementById("review-delay-comment-input").value.trim();
+      if (!eta) throw new Error(t().delayNeedsEta);
+      await patchStatus("delayed", comment);
+      await patchEta(eta);
+    } else if (action === "solved") {
+      const comment = document.getElementById("review-resolve-comment-input").value.trim();
+      if (!comment) throw new Error(t().resolveNeedsComment);
+      await patchStatus("solved", comment);
     }
 
     messageNode.classList.add("success");
     messageNode.textContent = t().actionSuccess;
+    clearActionInputs();
     await loadDashboard();
     await renderAll();
   } catch (error) {
@@ -605,6 +711,8 @@ document.querySelectorAll("[data-tab]").forEach((button) => {
   button.addEventListener("click", () => setActiveTab(button.dataset.tab));
 });
 
+document.getElementById("review-status-select")?.addEventListener("change", syncActionGroups);
+document.getElementById("review-forward-division-select")?.addEventListener("change", fillForwardDepartments);
 document.getElementById("officer-review-submit-button")?.addEventListener("click", submitReview);
 document.getElementById("download-weekly-report-button")?.addEventListener("click", downloadWeeklyReport);
 
@@ -612,9 +720,7 @@ document.getElementById("department-logout-button")?.addEventListener("click", a
   try {
     await fetch(`${apiBase}/api/auth/logout`, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${departmentAuthToken}`,
-      },
+      headers: { Authorization: `Bearer ${departmentAuthToken}` },
     });
   } catch {}
 

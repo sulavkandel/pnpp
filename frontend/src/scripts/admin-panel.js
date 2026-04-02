@@ -7,6 +7,8 @@ if (!storedAdmin || !adminAuthToken) {
 }
 
 const adminUser = storedAdmin ? JSON.parse(storedAdmin) : null;
+const wards = Array.from({ length: 33 }, (_, index) => String(index + 1));
+
 const state = {
   dashboard: null,
   departments: [],
@@ -17,10 +19,8 @@ const state = {
     invalidPending: [],
     officerActionReviews: [],
   },
-  analytics: null,
   complaints: [],
   activeSection: "dashboard",
-  activeManagementTab: "departments",
   activeOversightTab: "escalated",
   selectedOversightToken: "",
 };
@@ -59,6 +59,7 @@ async function request(path, options = {}) {
       ...(options.headers || {}),
     },
   });
+
   const result = await response.json();
   if (!response.ok) {
     throw new Error(result.message || "Request failed.");
@@ -66,13 +67,13 @@ async function request(path, options = {}) {
   return result;
 }
 
-function renderMetricCards(targetId, cards) {
+function renderSummaryCards(targetId, cards) {
   const node = document.getElementById(targetId);
   if (!node) return;
   node.innerHTML = cards
     .map(
       (card) => `
-        <article class="admin-kpi-card ${card.tone || ""}">
+        <article class="admin-orbit-metric ${card.tone || ""}">
           <p>${card.label}</p>
           <strong>${card.value}</strong>
           <span>${card.note || ""}</span>
@@ -82,9 +83,10 @@ function renderMetricCards(targetId, cards) {
     .join("");
 }
 
-function renderBarList(targetId, items, formatter = (item) => `${item.count}`) {
+function renderBarStack(targetId, items, formatter = (item) => `${item.count}`) {
   const node = document.getElementById(targetId);
   if (!node) return;
+
   if (!items.length) {
     node.innerHTML = `<div class="admin-empty-state">No data available.</div>`;
     return;
@@ -92,19 +94,18 @@ function renderBarList(targetId, items, formatter = (item) => `${item.count}`) {
 
   const max = Math.max(...items.map((item) => item.count || item.total || 0), 1);
   node.innerHTML = `
-    <div class="admin-bar-stack">
+    <div class="admin-orbit-bars">
       ${items
         .map((item) => {
           const value = item.count || item.total || 0;
-          const width = Math.max(8, (value / max) * 100);
           return `
-            <div class="admin-bar-row">
-              <div class="admin-bar-head">
+            <div class="admin-orbit-bar">
+              <div class="admin-orbit-bar-head">
                 <span>${item.label}</span>
                 <strong>${formatter(item)}</strong>
               </div>
-              <div class="admin-bar-track">
-                <div class="admin-bar-fill" style="width:${width}%"></div>
+              <div class="admin-orbit-bar-track">
+                <div class="admin-orbit-bar-fill" style="width:${Math.max(10, (value / max) * 100)}%"></div>
               </div>
             </div>
           `;
@@ -114,9 +115,10 @@ function renderBarList(targetId, items, formatter = (item) => `${item.count}`) {
   `;
 }
 
-function renderListCards(targetId, items, emptyText = "No items available.") {
+function renderCompactCards(targetId, items, emptyText) {
   const node = document.getElementById(targetId);
   if (!node) return;
+
   if (!items.length) {
     node.innerHTML = `<div class="admin-empty-state">${emptyText}</div>`;
     return;
@@ -125,154 +127,176 @@ function renderListCards(targetId, items, emptyText = "No items available.") {
   node.innerHTML = items
     .map(
       (item) => `
-        <article class="admin-list-item">
-          <div class="admin-list-item-main">
-            <div class="admin-list-item-topline">
-              <span class="admin-badge ${item.status || item.action || ""}">${item.statusLabel || item.status || item.action || "Item"}</span>
-              <strong>${item.tokenNumber || item.code || item.name}</strong>
-            </div>
-            <h4>${item.title || item.name || item.officerName || "Untitled"}</h4>
-            <p>${item.text || item.description || item.assignedOfficeLabel || item.divisionName || ""}</p>
+        <article class="admin-orbit-card compact">
+          <div class="admin-orbit-card-head">
+            <span class="admin-orbit-pill ${item.status || ""}">${(item.status || "open").replaceAll("_", " ")}</span>
+            <strong>${item.tokenNumber || item.name}</strong>
           </div>
+          <h4>${item.title || item.name}</h4>
+          <p>${item.assignedOfficeLabel || item.text || item.reviewMeta?.note || "-"}</p>
         </article>
       `,
     )
     .join("");
+}
+
+function getDepartmentByCode(code) {
+  return state.departments.find((department) => department.code === code) || null;
+}
+
+function getOversightQueue() {
+  if (state.activeOversightTab === "invalid") return state.oversight.invalidPending;
+  if (state.activeOversightTab === "reviews") return state.oversight.officerActionReviews;
+  return state.oversight.escalated;
+}
+
+function getSelectedComplaint() {
+  return state.complaints.find((complaint) => complaint.tokenNumber === state.selectedOversightToken) || null;
 }
 
 function renderDashboard() {
   if (!state.dashboard) return;
-  const { overview, charts, spotlight } = state.dashboard;
-  renderMetricCards("admin-overview-cards", [
-    { label: "Total Complaints (Month)", value: overview.totalComplaintsMonth, note: `${overview.departments} departments live` },
-    { label: "Solved Rate", value: `${overview.solvedRate}%`, note: "Verified city-wide" },
-    { label: "Pending", value: overview.pending, note: "Open and in review", tone: "warning" },
-    { label: "Forwarded", value: overview.forwarded, note: "Needs coordination", tone: "soft" },
-    { label: "Escalated", value: overview.escalated, note: "Admin attention required", tone: "danger" },
-    { label: "Active Rotations", value: overview.activeRotations, note: `${overview.officers} officers configured` },
+  const { overview, charts } = state.dashboard;
+
+  renderSummaryCards("dashboard-top-metrics", [
+    { label: "Monthly complaints", value: overview.totalComplaintsMonth, note: "Current reporting month" },
+    { label: "Solved rate", value: `${overview.solvedRate}%`, note: "City-wide resolution ratio", tone: "success" },
+    { label: "Pending", value: overview.pending, note: "Needs operational follow-up", tone: "warning" },
+    { label: "Escalated", value: overview.escalated, note: "Central admin decisions due", tone: "danger" },
+    { label: "Active officers", value: overview.officers, note: `${overview.activeRotations} active rotations` },
   ]);
 
-  renderBarList("dashboard-department-chart", charts.complaintsByDepartment);
-  renderBarList("dashboard-solved-chart", charts.solvedByDepartment, (item) => `${item.solved}/${item.total} · ${item.percent}%`);
+  renderBarStack("dashboard-department-chart", charts.complaintsByDepartment);
+  renderBarStack("dashboard-solved-chart", charts.solvedByDepartment, (item) => `${item.solved}/${item.total} · ${item.percent}%`);
 
-  renderListCards("dashboard-escalations-list", spotlight.recentEscalations, "No escalated complaints right now.");
-  renderListCards("dashboard-invalid-list", spotlight.recentInvalid, "No invalid complaints awaiting review.");
-  renderListCards("dashboard-reviews-list", spotlight.officerActionReviews, "No officer action reviews pending.");
+  renderCompactCards("dashboard-escalations-list", state.oversight.escalated.slice(0, 4), "No escalated complaints right now.");
+  renderCompactCards("dashboard-invalid-list", state.oversight.invalidPending.slice(0, 4), "No invalid complaints awaiting verification.");
+  renderCompactCards("dashboard-reviews-list", state.oversight.officerActionReviews.slice(0, 4), "No officer action reviews pending.");
 
-  setText("nav-total-complaints", String(overview.totalComplaintsMonth));
-  setText("nav-total-officers", String(overview.officers));
+  setText("nav-dashboard-count", String(overview.totalComplaintsMonth));
+  setText("nav-officer-count", String(overview.officers));
   setText(
     "nav-oversight-count",
-    String(
-      state.oversight.escalated.length
-      + state.oversight.invalidPending.length
-      + state.oversight.officerActionReviews.length,
-    ),
+    String(state.oversight.escalated.length + state.oversight.invalidPending.length + state.oversight.officerActionReviews.length),
   );
-  setText("nav-solved-rate", `${overview.solvedRate}%`);
-  setText("nav-active-rotations", String(overview.activeRotations));
+  setText("nav-analytics-rate", `${overview.solvedRate}%`);
 }
 
-function fillDepartmentSelect(selectId, includeAll = false) {
+function fillDepartmentOptions(selectId, allowBlank = false) {
   const node = document.getElementById(selectId);
   if (!node) return;
-  node.innerHTML = `${includeAll ? `<option value="">All Departments</option>` : `<option value="">Select department</option>`}${state.departments
-    .map((department) => `<option value="${department.code}">${department.name}</option>`)
+  const currentValue = node.value;
+  node.innerHTML = `${allowBlank ? `<option value="">Select department</option>` : ""}${state.departments
+    .map((department) => `<option value="${department.code}" ${currentValue === department.code ? "selected" : ""}>${department.name}</option>`)
     .join("")}`;
 }
 
-function fillOfficerSelect(selectId, includeAll = false) {
+function fillSubDepartmentOptions(selectId, departmentCode, allowBlank = false) {
   const node = document.getElementById(selectId);
   if (!node) return;
-  node.innerHTML = `${includeAll ? `<option value="">All Officers</option>` : `<option value="">Select officer</option>`}${state.officers
-    .map((officer) => `<option value="${officer.id}">${officer.name} · ${officer.divisionName || `Ward ${officer.wardNumber}`}</option>`)
+  const currentValue = node.value;
+  const department = getDepartmentByCode(departmentCode) || state.departments[0];
+  const options = department?.subDepartments || [];
+  node.innerHTML = `${allowBlank ? `<option value="">Select sub department</option>` : ""}${options
+    .map((subDepartment) => `<option value="${subDepartment}" ${currentValue === subDepartment ? "selected" : ""}>${subDepartment}</option>`)
     .join("")}`;
 }
 
-function syncOfficerDepartmentName() {
-  const departmentSelect = document.getElementById("officer-department-code");
-  const divisionInput = document.querySelector('#officer-form input[name="divisionName"]');
-  if (!departmentSelect || !divisionInput) return;
-  const department = state.departments.find((item) => item.code === departmentSelect.value);
-  if (department && !divisionInput.value) {
-    divisionInput.value = department.name;
-  }
+function fillWardOptions() {
+  const node = document.getElementById("officer-ward-number");
+  if (!node) return;
+  const currentValue = node.value;
+  node.innerHTML = `<option value="">Select ward</option>${wards
+    .map((ward) => `<option value="${ward}" ${currentValue === ward ? "selected" : ""}>Ward ${ward}</option>`)
+    .join("")}`;
 }
 
-function renderDepartments() {
-  fillDepartmentSelect("officer-department-code");
-  fillDepartmentSelect("oversight-target-division");
-  fillDepartmentSelect("analytics-department-filter", true);
-
-  const node = document.getElementById("departments-list");
+function fillOfficerSelect(selectId, includeBlank = true) {
+  const node = document.getElementById(selectId);
   if (!node) return;
-  if (!state.departments.length) {
-    node.innerHTML = `<div class="admin-empty-state">No departments configured yet.</div>`;
-    return;
-  }
-
-  node.innerHTML = state.departments
-    .map(
-      (department) => `
-        <article class="admin-record-card">
-          <div>
-            <div class="admin-record-title">
-              <strong>${department.name}</strong>
-              <span class="admin-badge ${department.active ? "solved" : "pending"}">${department.type}</span>
-            </div>
-            <p>${department.code} · ${department.description || "No description provided."}</p>
-            <small>Wards: ${department.wards.length ? department.wards.join(", ") : "City-wide"}</small>
-          </div>
-          <div class="admin-card-actions">
-            <button type="button" class="button secondary compact-button" data-edit-department="${department.code}">Edit</button>
-            <button type="button" class="button danger compact-button" data-delete-department="${department.code}">Delete</button>
-          </div>
-        </article>
-      `,
-    )
-    .join("");
+  const currentValue = node.value;
+  node.innerHTML = `${includeBlank ? `<option value="">Select officer</option>` : ""}${state.officers
+    .map((officer) => `<option value="${officer.id}" ${currentValue === officer.id ? "selected" : ""}>${officer.name} · ${officer.divisionName || `Ward ${officer.wardNumber}`}</option>`)
+    .join("")}`;
 }
 
-function renderOfficers() {
-  fillOfficerSelect("rotation-officer-select");
-  fillOfficerSelect("oversight-penalty-officer");
-  fillOfficerSelect("oversight-reward-officer");
-  fillOfficerSelect("analytics-officer-filter", true);
+function syncOfficerFormFields() {
+  const form = document.getElementById("officer-form");
+  if (!form) return;
+  const officeType = form.elements.officeType.value;
+  const departmentField = form.querySelector(".officer-department-field");
+  const subDepartmentField = form.querySelector(".officer-subdepartment-field");
+  const wardField = form.querySelector(".officer-ward-field");
+  if (!departmentField || !subDepartmentField || !wardField) return;
 
-  const node = document.getElementById("officers-list");
+  departmentField.classList.toggle("hidden", officeType !== "department");
+  subDepartmentField.classList.toggle("hidden", officeType !== "department");
+  wardField.classList.toggle("hidden", officeType !== "ward");
+
+  const selectedDepartmentCode = form.elements.departmentCode.value || state.departments[0]?.code || "";
+  fillSubDepartmentOptions("officer-subdepartment", selectedDepartmentCode, true);
+}
+
+function renderActiveOfficerGroups() {
+  const node = document.getElementById("active-officer-groups");
   if (!node) return;
-  if (!state.officers.length) {
-    node.innerHTML = `<div class="admin-empty-state">No officers configured yet.</div>`;
-    return;
-  }
 
-  node.innerHTML = state.officers
-    .map(
-      (officer) => `
-        <article class="admin-record-card">
-          <div>
-            <div class="admin-record-title">
-              <strong>${officer.name}</strong>
-              <span class="admin-badge ${officer.status === "active" ? "solved" : "pending"}">${officer.status}</span>
-            </div>
-            <p>${officer.divisionName || `Ward ${officer.wardNumber}`} ${officer.sectionName ? `· ${officer.sectionName}` : ""}</p>
-            <small>${officer.loginId} · ${officer.email || "No email"} · ${officer.currentWeekPoints} pts this week</small>
-          </div>
-          <div class="admin-card-actions">
-            <button type="button" class="button secondary compact-button" data-edit-officer="${officer.id}">Edit</button>
-            <button type="button" class="button secondary compact-button" data-toggle-officer="${officer.id}">
-              ${officer.status === "active" ? "Deactivate" : "Activate"}
-            </button>
-          </div>
-        </article>
-      `,
-    )
-    .join("");
+  const activeOfficers = state.officers.filter((officer) => officer.status === "active");
+  const departmentGroups = new Map();
+  const wardGroups = new Map();
+
+  activeOfficers.forEach((officer) => {
+    if (officer.officeType === "department") {
+      const key = `${officer.divisionName}__${officer.sectionName || "Division-wide"}`;
+      const list = departmentGroups.get(key) || [];
+      list.push(officer);
+      departmentGroups.set(key, list);
+      return;
+    }
+    const key = `Ward ${officer.wardNumber}`;
+    const list = wardGroups.get(key) || [];
+    list.push(officer);
+    wardGroups.set(key, list);
+  });
+
+  const renderGroup = (title, items) => `
+    <section class="admin-orbit-group">
+      <h4>${title}</h4>
+      <div class="admin-orbit-group-list">
+        ${items
+          .map(
+            (officer) => `
+              <article class="admin-orbit-card">
+                <div class="admin-orbit-card-head">
+                  <strong>${officer.name}</strong>
+                  <span class="admin-orbit-pill success">Active</span>
+                </div>
+                <p>${officer.loginId} · ${officer.email || "No email"}</p>
+                <small>Active until ${formatDate(officer.activationExpiresAt)}</small>
+                <div class="admin-orbit-card-actions">
+                  <button type="button" class="button secondary compact-button" data-edit-officer="${officer.id}">Edit</button>
+                  <button type="button" class="button secondary compact-button" data-toggle-officer="${officer.id}">Deactivate</button>
+                </div>
+              </article>
+            `,
+          )
+          .join("")}
+      </div>
+    </section>
+  `;
+
+  const sections = [
+    ...[...departmentGroups.entries()].map(([title, items]) => renderGroup(title.replaceAll("__", " / "), items)),
+    ...[...wardGroups.entries()].map(([title, items]) => renderGroup(title, items)),
+  ];
+
+  node.innerHTML = sections.length ? sections.join("") : `<div class="admin-empty-state">No active officers available.</div>`;
 }
 
 function renderRotations() {
   const node = document.getElementById("rotations-list");
   if (!node) return;
+
   if (!state.rotations.length) {
     node.innerHTML = `<div class="admin-empty-state">No rotations scheduled yet.</div>`;
     return;
@@ -281,60 +305,59 @@ function renderRotations() {
   node.innerHTML = state.rotations
     .map(
       (rotation) => `
-        <article class="admin-record-card">
-          <div>
-            <div class="admin-record-title">
-              <strong>${rotation.officerName}</strong>
-              <span class="admin-badge ${rotation.active ? "solved" : "forwarded"}">${rotation.active ? "Active" : "Scheduled"}</span>
-            </div>
-            <p>${rotation.divisionName || `Ward ${rotation.wardNumber}`} ${rotation.sectionName ? `· ${rotation.sectionName}` : ""}</p>
-            <small>${formatDate(rotation.startDate)} to ${formatDate(rotation.endDate)} · ${rotation.weekKeys.join(", ")}</small>
+        <article class="admin-orbit-card compact">
+          <div class="admin-orbit-card-head">
+            <strong>${rotation.officerName}</strong>
+            <span class="admin-orbit-pill ${rotation.active ? "success" : "warning"}">${rotation.active ? "Active" : "Scheduled"}</span>
           </div>
+          <p>${rotation.divisionName || `Ward ${rotation.wardNumber}`}${rotation.sectionName ? ` / ${rotation.sectionName}` : ""}</p>
+          <small>${formatDate(rotation.startDate)} to ${formatDate(rotation.endDate)}</small>
         </article>
       `,
     )
     .join("");
 }
 
-function getOversightListForActiveTab() {
-  if (state.activeOversightTab === "invalid") return state.oversight.invalidPending;
-  if (state.activeOversightTab === "reviews") return state.oversight.officerActionReviews;
-  return state.oversight.escalated;
-}
-
 function renderOversightList() {
-  const list = getOversightListForActiveTab();
-  setText(
-    "oversight-list-title",
-    state.activeOversightTab === "invalid"
-      ? "Invalid complaints pending"
-      : state.activeOversightTab === "reviews"
-        ? "Officer action reviews"
-        : "Escalated complaints",
-  );
-
   const node = document.getElementById("oversight-list");
   if (!node) return;
-  if (!list.length) {
+
+  const items = getOversightQueue();
+  setText(
+    "oversight-list-title",
+    state.activeOversightTab === "reviews"
+      ? "Cross-week officer validations"
+      : state.activeOversightTab === "invalid"
+        ? "Invalid complaint verification"
+        : "Escalations awaiting central admin response",
+  );
+  setText(
+    "oversight-queue-kicker",
+    state.activeOversightTab === "reviews"
+      ? "Officer action reviews"
+      : state.activeOversightTab === "invalid"
+        ? "Invalid complaints"
+        : "Escalated queue",
+  );
+
+  if (!items.length) {
     node.innerHTML = `<div class="admin-empty-state">Nothing is waiting in this queue.</div>`;
     return;
   }
 
-  node.innerHTML = list
+  node.innerHTML = items
     .map(
       (complaint) => `
-        <article class="admin-record-card ${state.selectedOversightToken === complaint.tokenNumber ? "selected" : ""}">
-          <div>
-            <div class="admin-record-title">
-              <strong>${complaint.tokenNumber}</strong>
-              <span class="admin-badge ${complaint.status}">${complaint.status.replaceAll("_", " ")}</span>
-            </div>
-            <h4>${complaint.title}</h4>
-            <p>${complaint.assignedOfficeLabel || complaint.assignedDepartment || "-"}</p>
-            <small>${formatDateTime(complaint.updatedAt || complaint.createdAt)}</small>
+        <article class="admin-orbit-card ${state.selectedOversightToken === complaint.tokenNumber ? "selected" : ""}">
+          <div class="admin-orbit-card-head">
+            <strong>${complaint.tokenNumber}</strong>
+            <span class="admin-orbit-pill ${complaint.status}">${complaint.status.replaceAll("_", " ")}</span>
           </div>
-          <div class="admin-card-actions">
-            <button type="button" class="button compact-button" data-select-oversight="${complaint.tokenNumber}">Review</button>
+          <h4>${complaint.title}</h4>
+          <p>${complaint.assignedOfficeLabel || complaint.assignedDepartment || "-"}</p>
+          <small>${formatDateTime(complaint.updatedAt || complaint.createdAt)}</small>
+          <div class="admin-orbit-card-actions">
+            <button type="button" class="button compact-button" data-select-oversight="${complaint.tokenNumber}">Open</button>
           </div>
         </article>
       `,
@@ -342,12 +365,23 @@ function renderOversightList() {
     .join("");
 }
 
+function syncOversightMode() {
+  const escalated = document.querySelector(".oversight-mode-escalated");
+  const invalid = document.querySelector(".oversight-mode-invalid");
+  const reviews = document.querySelector(".oversight-mode-reviews");
+  escalated?.classList.toggle("hidden", state.activeOversightTab !== "escalated");
+  invalid?.classList.toggle("hidden", state.activeOversightTab !== "invalid");
+  reviews?.classList.toggle("hidden", state.activeOversightTab !== "reviews");
+}
+
 function renderOversightDetail() {
-  const complaint = state.complaints.find((item) => item.tokenNumber === state.selectedOversightToken);
+  const complaint = getSelectedComplaint();
   const detailNode = document.getElementById("oversight-detail");
   const emptyNode = document.getElementById("oversight-detail-empty");
   const form = document.getElementById("oversight-action-form");
   if (!detailNode || !emptyNode || !form) return;
+
+  syncOversightMode();
 
   if (!complaint) {
     detailNode.classList.add("hidden");
@@ -359,56 +393,42 @@ function renderOversightDetail() {
   emptyNode.classList.add("hidden");
   detailNode.classList.remove("hidden");
   form.classList.remove("hidden");
+  form.elements.tokenNumber.value = complaint.tokenNumber;
 
   detailNode.innerHTML = `
-    <div class="admin-detail-stack">
-      <div class="admin-detail-header">
-        <div>
-          <span class="admin-badge ${complaint.status}">${complaint.status.replaceAll("_", " ")}</span>
-          <h3>${complaint.title}</h3>
-          <p>${complaint.tokenNumber} · ${complaint.assignedOfficeLabel || complaint.assignedDepartment || "-"}</p>
-        </div>
+    <div class="admin-orbit-detail">
+      <div class="admin-orbit-card-head">
+        <strong>${complaint.tokenNumber}</strong>
+        <span class="admin-orbit-pill ${complaint.status}">${complaint.status.replaceAll("_", " ")}</span>
       </div>
-      <div class="admin-detail-grid">
+      <h3>${complaint.title}</h3>
+      <p>${complaint.description || "-"}</p>
+      <div class="admin-orbit-detail-grid">
         <div>
-          <h4>Description</h4>
-          <p>${complaint.description || "-"}</p>
+          <h4>Current office</h4>
+          <p>${complaint.assignedOfficeLabel || complaint.assignedDepartment || "-"}</p>
+        </div>
+        <div>
+          <h4>Citizen</h4>
+          <p>${complaint.citizenName || "Anonymous"}${complaint.citizenPhone ? ` · ${complaint.citizenPhone}` : ""}</p>
         </div>
         <div>
           <h4>Location</h4>
-          <p>${complaint.locationText || "-"} ${complaint.wardNumber ? `· Ward ${complaint.wardNumber}` : ""}</p>
+          <p>${complaint.locationText || "-"}${complaint.wardNumber ? ` · Ward ${complaint.wardNumber}` : ""}</p>
         </div>
         <div>
-          <h4>Citizen / Contact</h4>
-          <p>${complaint.citizenName || "Anonymous"} ${complaint.citizenPhone ? `· ${complaint.citizenPhone}` : ""}</p>
-        </div>
-        <div>
-          <h4>Officer</h4>
+          <h4>Latest officer</h4>
           <p>${complaint.assignedOfficerName || "Unassigned"}</p>
         </div>
       </div>
-      <div>
-        <h4>History</h4>
-        <div class="admin-history-list">
-          ${((complaint.history || []).length ? complaint.history : [{ note: "No history recorded yet.", timestamp: complaint.createdAt }])
-            .slice(-6)
-            .reverse()
-            .map(
-              (entry) => `
-                <div class="admin-history-item">
-                  <strong>${entry.action || "update"}</strong>
-                  <span>${entry.note || "-"}</span>
-                  <small>${formatDateTime(entry.timestamp || entry.createdAt)}</small>
-                </div>
-              `,
-            )
-            .join("")}
+      ${complaint.reviewMeta ? `
+        <div class="admin-orbit-review-note">
+          <strong>Officer review context</strong>
+          <p>${complaint.reviewMeta.note || "-"}</p>
         </div>
-      </div>
+      ` : ""}
     </div>
   `;
-
-  form.elements.tokenNumber.value = complaint.tokenNumber;
 }
 
 function getFilteredComplaints() {
@@ -416,57 +436,59 @@ function getFilteredComplaints() {
   const officerId = document.getElementById("analytics-officer-filter")?.value || "";
   const dateFrom = document.getElementById("analytics-date-from")?.value || "";
   const dateTo = document.getElementById("analytics-date-to")?.value || "";
+  const departmentName = getDepartmentByCode(departmentCode)?.name || "";
 
   return state.complaints.filter((complaint) => {
-    const matchesDepartment = !departmentCode || state.departments.find((department) => department.code === departmentCode)?.name === complaint.divisionName;
-    const matchesOfficer = !officerId || complaint.assignedOfficerId === officerId;
     const createdAt = new Date(complaint.createdAt).getTime();
-    const matchesFrom = !dateFrom || createdAt >= new Date(dateFrom).getTime();
-    const matchesTo = !dateTo || createdAt <= new Date(`${dateTo}T23:59:59`).getTime();
-    return matchesDepartment && matchesOfficer && matchesFrom && matchesTo;
+    return (!departmentCode || complaint.divisionName === departmentName)
+      && (!officerId || complaint.assignedOfficerId === officerId)
+      && (!dateFrom || createdAt >= new Date(dateFrom).getTime())
+      && (!dateTo || createdAt <= new Date(`${dateTo}T23:59:59`).getTime());
   });
 }
 
 function renderAnalytics() {
+  fillDepartmentOptions("analytics-department-filter", true);
+  fillOfficerSelect("analytics-officer-filter", true);
+
   const complaints = getFilteredComplaints();
   const pending = complaints.filter((item) => item.status === "pending").length;
   const inProgress = complaints.filter((item) => item.status === "in_progress").length;
-  const forwardedToDepartment = complaints.filter((item) => item.status === "forwarded").length;
-  const forwardedToAdmin = complaints.filter((item) => item.status === "escalated" || item.officeType === "central_admin").length;
-  const resolved = complaints.filter((item) => item.status === "solved").length;
+  const solved = complaints.filter((item) => item.status === "solved").length;
+  const forwarded = complaints.filter((item) => item.status === "forwarded").length;
+  const higherLevel = complaints.filter((item) => item.forwardedToLabel === "Transferred to higher level authority" || item.status === "escalated").length;
 
-  renderMetricCards("analytics-summary-cards", [
-    { label: "Filtered Complaints", value: complaints.length, note: "Current report scope" },
-    { label: "Resolved", value: resolved, note: "Verified closed cases", tone: "success" },
-    { label: "Pending", value: pending, note: "Awaiting review", tone: "warning" },
-    { label: "In Progress", value: inProgress, note: "Assigned to officers" },
+  renderSummaryCards("analytics-summary-cards", [
+    { label: "Filtered complaints", value: complaints.length, note: "Current report scope" },
+    { label: "Solved", value: solved, note: "Closed and verified", tone: "success" },
+    { label: "Pending", value: pending, note: "Waiting for first action", tone: "warning" },
+    { label: "Forward / higher-level", value: forwarded + higherLevel, note: "Requires coordination", tone: "danger" },
   ]);
 
-  renderBarList("analytics-status-chart", [
-    { label: "In Progress", count: inProgress },
+  renderBarStack("analytics-status-chart", [
     { label: "Pending", count: pending },
+    { label: "In Progress", count: inProgress },
+    { label: "Solved", count: solved },
     { label: "Delayed", count: complaints.filter((item) => item.status === "delayed").length },
-    { label: "Solved", count: resolved },
   ]);
 
-  renderBarList("analytics-forward-chart", [
-    { label: "Forwarded to Department/Ward", count: forwardedToDepartment },
-    { label: "Escalated to Central Admin", count: forwardedToAdmin },
+  renderBarStack("analytics-forward-chart", [
+    { label: "Transferred to department", count: forwarded },
+    { label: "Transferred to higher level", count: higherLevel },
   ]);
 
-  const leaderboard = state.officers
-    .map((officer) => ({
-      label: officer.name,
-      count: officer.currentWeekPoints,
-    }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 8);
-  renderBarList("analytics-officer-leaderboard", leaderboard);
+  renderBarStack(
+    "analytics-officer-leaderboard",
+    state.officers
+      .map((officer) => ({ label: officer.name, count: officer.currentWeekPoints }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 8),
+  );
 
   const tableNode = document.getElementById("analytics-report-table");
   if (!tableNode) return;
   if (!complaints.length) {
-    tableNode.innerHTML = `<div class="admin-empty-state">No complaints match the selected filters.</div>`;
+    tableNode.innerHTML = `<div class="admin-empty-state">No complaints match these filters.</div>`;
     return;
   }
 
@@ -475,7 +497,7 @@ function renderAnalytics() {
       <table class="department-work-table">
         <thead>
           <tr>
-            <th>ID</th>
+            <th>Token</th>
             <th>Title</th>
             <th>Department</th>
             <th>Status</th>
@@ -505,32 +527,7 @@ function renderAnalytics() {
   `;
 }
 
-function renderSettings() {
-  const runtimeNode = document.getElementById("settings-runtime");
-  const securityNode = document.getElementById("settings-security");
-  if (runtimeNode) {
-    runtimeNode.innerHTML = `
-      <div class="admin-setting-item"><strong>Backend API</strong><span>${apiBase}</span></div>
-      <div class="admin-setting-item"><strong>Configured Departments</strong><span>${state.departments.length}</span></div>
-      <div class="admin-setting-item"><strong>Configured Officers</strong><span>${state.officers.length}</span></div>
-      <div class="admin-setting-item"><strong>Scheduled Rotations</strong><span>${state.rotations.length}</span></div>
-    `;
-  }
-
-  if (securityNode) {
-    securityNode.innerHTML = `
-      <div class="admin-setting-item"><strong>Admin User</strong><span>${adminUser?.name || "Super Admin"}</span></div>
-      <div class="admin-setting-item"><strong>Login ID</strong><span>${adminUser?.loginId || "admin@pokharamun.gov.np"}</span></div>
-      <div class="admin-setting-item"><strong>Session Storage</strong><span>Active</span></div>
-      <div class="admin-setting-item"><strong>Role</strong><span>${adminUser?.role || "admin"}</span></div>
-    `;
-  }
-}
-
 function renderEverything() {
-  setText("admin-user-name", adminUser?.name || "Super Admin");
-  setText("admin-user-role", "Central Administration");
-  setText("admin-user-avatar", String(adminUser?.name || "SA").trim().slice(0, 2).toUpperCase());
   setText(
     "admin-live-date",
     new Intl.DateTimeFormat("en-GB", {
@@ -540,61 +537,19 @@ function renderEverything() {
     }).format(new Date()),
   );
 
+  fillDepartmentOptions("officer-department-code", true);
+  fillDepartmentOptions("oversight-target-department", true);
+  fillSubDepartmentOptions("oversight-target-subdepartment", document.getElementById("oversight-target-department")?.value || state.departments[0]?.code || "", true);
+  fillWardOptions();
+  fillOfficerSelect("rotation-officer-select");
+  syncOfficerFormFields();
+
   renderDashboard();
-  renderDepartments();
-  renderOfficers();
+  renderActiveOfficerGroups();
   renderRotations();
   renderOversightList();
   renderOversightDetail();
   renderAnalytics();
-  renderSettings();
-}
-
-async function loadAllData() {
-  const [dashboard, departments, officers, rotations, oversight, analytics, complaints] = await Promise.all([
-    request("/api/admin/dashboard"),
-    request("/api/admin/departments"),
-    request("/api/admin/officers"),
-    request("/api/admin/rotations"),
-    request("/api/admin/oversight"),
-    request("/api/admin/analytics"),
-    request("/api/admin/complaints"),
-  ]);
-
-  state.dashboard = dashboard.dashboard;
-  state.departments = departments.departments;
-  state.officers = officers.officers;
-  state.rotations = rotations.rotations;
-  state.oversight = oversight.oversight;
-  state.analytics = analytics.analytics;
-  state.complaints = complaints.complaints;
-
-  const currentOversightList = getOversightListForActiveTab();
-  if (!currentOversightList.some((item) => item.tokenNumber === state.selectedOversightToken)) {
-    state.selectedOversightToken = currentOversightList[0]?.tokenNumber || "";
-  }
-
-  renderEverything();
-}
-
-function resetDepartmentForm() {
-  const form = document.getElementById("department-form");
-  if (!form) return;
-  form.reset();
-  form.elements.editingCode.value = "";
-  form.elements.code.disabled = false;
-  setText("department-form-message", "");
-}
-
-function resetOfficerForm() {
-  const form = document.getElementById("officer-form");
-  if (!form) return;
-  form.reset();
-  form.elements.editingOfficerId.value = "";
-  form.elements.password.required = false;
-  form.elements.active.checked = true;
-  syncOfficerDepartmentName();
-  setText("officer-form-message", "");
 }
 
 function setMessage(targetId, message, tone = "") {
@@ -604,22 +559,49 @@ function setMessage(targetId, message, tone = "") {
   node.textContent = message;
 }
 
-document.querySelectorAll(".admin-nav-link").forEach((button) => {
+function resetOfficerForm() {
+  const form = document.getElementById("officer-form");
+  if (!form) return;
+  form.reset();
+  form.elements.editingOfficerId.value = "";
+  form.elements.active.checked = true;
+  form.elements.officeType.value = "department";
+  fillDepartmentOptions("officer-department-code", true);
+  syncOfficerFormFields();
+  setMessage("officer-form-message", "");
+}
+
+async function loadAllData() {
+  const [dashboard, departments, officers, rotations, oversight, complaints] = await Promise.all([
+    request("/api/admin/dashboard"),
+    request("/api/admin/departments"),
+    request("/api/admin/officers"),
+    request("/api/admin/rotations"),
+    request("/api/admin/oversight"),
+    request("/api/admin/complaints"),
+  ]);
+
+  state.dashboard = dashboard.dashboard;
+  state.departments = departments.departments;
+  state.officers = officers.officers;
+  state.rotations = rotations.rotations;
+  state.oversight = oversight.oversight;
+  state.complaints = complaints.complaints;
+
+  const queue = getOversightQueue();
+  if (!queue.some((item) => item.tokenNumber === state.selectedOversightToken)) {
+    state.selectedOversightToken = queue[0]?.tokenNumber || "";
+  }
+
+  renderEverything();
+}
+
+document.querySelectorAll(".admin-orbit-nav").forEach((button) => {
   button.addEventListener("click", () => {
     state.activeSection = button.dataset.section;
-    document.querySelectorAll(".admin-nav-link").forEach((item) => item.classList.toggle("active", item === button));
-    document.querySelectorAll(".admin-section").forEach((section) => {
+    document.querySelectorAll(".admin-orbit-nav").forEach((item) => item.classList.toggle("active", item === button));
+    document.querySelectorAll(".admin-orbit-section").forEach((section) => {
       section.classList.toggle("active", section.id === `section-${state.activeSection}`);
-    });
-  });
-});
-
-document.querySelectorAll("[data-management-tab]").forEach((button) => {
-  button.addEventListener("click", () => {
-    state.activeManagementTab = button.dataset.managementTab;
-    document.querySelectorAll("[data-management-tab]").forEach((item) => item.classList.toggle("active", item === button));
-    document.querySelectorAll(".admin-management-panel").forEach((panel) => {
-      panel.classList.toggle("active", panel.id === `management-${state.activeManagementTab}`);
     });
   });
 });
@@ -627,86 +609,36 @@ document.querySelectorAll("[data-management-tab]").forEach((button) => {
 document.querySelectorAll("[data-oversight-tab]").forEach((button) => {
   button.addEventListener("click", () => {
     state.activeOversightTab = button.dataset.oversightTab;
-    state.selectedOversightToken = getOversightListForActiveTab()[0]?.tokenNumber || "";
     document.querySelectorAll("[data-oversight-tab]").forEach((item) => item.classList.toggle("active", item === button));
+    const queue = getOversightQueue();
+    state.selectedOversightToken = queue[0]?.tokenNumber || "";
     renderOversightList();
     renderOversightDetail();
   });
 });
 
-document.getElementById("admin-refresh-button")?.addEventListener("click", async () => {
-  await loadAllData();
+document.getElementById("officer-office-type")?.addEventListener("change", syncOfficerFormFields);
+document.getElementById("officer-department-code")?.addEventListener("change", (event) => {
+  fillSubDepartmentOptions("officer-subdepartment", event.target.value, true);
 });
-
-document.getElementById("admin-logout-button")?.addEventListener("click", async () => {
-  try {
-    await request("/api/auth/logout", { method: "POST" });
-  } catch {
-    // Ignore logout API errors and clear local session anyway.
-  }
-  sessionStorage.removeItem("admin_user");
-  sessionStorage.removeItem("admin_auth_token");
-  window.location.href = "./admin-login.html";
-});
-
-document.getElementById("department-reset-button")?.addEventListener("click", resetDepartmentForm);
-document.getElementById("officer-reset-button")?.addEventListener("click", resetOfficerForm);
-document.getElementById("officer-department-code")?.addEventListener("change", syncOfficerDepartmentName);
-
-document.getElementById("department-form")?.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const form = event.currentTarget;
-  const editingCode = String(form.elements.editingCode.value || "").trim();
-  const payload = {
-    code: String(form.elements.code.value || "").trim().toUpperCase(),
-    name: String(form.elements.name.value || "").trim(),
-    type: String(form.elements.type.value || "").trim(),
-    wards: String(form.elements.wards.value || "")
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean),
-    description: String(form.elements.description.value || "").trim(),
-  };
-
-  try {
-    if (editingCode) {
-      await request(`/api/admin/departments/${encodeURIComponent(editingCode)}`, {
-        method: "PATCH",
-        body: JSON.stringify(payload),
-      });
-      setMessage("department-form-message", "Department updated successfully.", "success");
-    } else {
-      await request("/api/admin/departments", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-      setMessage("department-form-message", "Department created successfully.", "success");
-    }
-    resetDepartmentForm();
-    await loadAllData();
-  } catch (error) {
-    setMessage("department-form-message", error.message, "error");
-  }
+document.getElementById("oversight-target-department")?.addEventListener("change", (event) => {
+  fillSubDepartmentOptions("oversight-target-subdepartment", event.target.value, true);
 });
 
 document.getElementById("officer-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
-  const editingOfficerId = String(form.elements.editingOfficerId.value || "").trim();
-  const officeType = String(form.elements.officeType.value || "department").trim();
-  const departmentCode = String(form.elements.departmentCode.value || "").trim();
-  const selectedDepartment = state.departments.find((item) => item.code === departmentCode);
+  const editingOfficerId = form.elements.editingOfficerId.value;
+  const officeType = form.elements.officeType.value;
+  const department = getDepartmentByCode(form.elements.departmentCode.value);
   const payload = {
     officeType,
-    departmentCode,
-    divisionName: officeType === "department"
-      ? String(form.elements.divisionName.value || selectedDepartment?.name || "").trim()
-      : "",
+    departmentCode: officeType === "department" ? (department?.code || "") : "",
+    divisionName: officeType === "department" ? (department?.name || "") : "",
     sectionName: officeType === "department" ? String(form.elements.sectionName.value || "").trim() : "",
     wardNumber: officeType === "ward" ? String(form.elements.wardNumber.value || "").trim() : "",
     name: String(form.elements.name.value || "").trim(),
     email: String(form.elements.email.value || "").trim(),
-    phone: String(form.elements.phone.value || "").trim(),
     loginId: String(form.elements.loginId.value || "").trim(),
     password: String(form.elements.password.value || "").trim(),
     active: Boolean(form.elements.active.checked),
@@ -724,7 +656,7 @@ document.getElementById("officer-form")?.addEventListener("submit", async (event
         method: "POST",
         body: JSON.stringify(payload),
       });
-      setMessage("officer-form-message", "Officer created successfully.", "success");
+      setMessage("officer-form-message", "Officer saved with one-week activation.", "success");
     }
     resetOfficerForm();
     await loadAllData();
@@ -733,19 +665,19 @@ document.getElementById("officer-form")?.addEventListener("submit", async (event
   }
 });
 
+document.getElementById("officer-reset-button")?.addEventListener("click", resetOfficerForm);
+
 document.getElementById("rotation-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
-  const payload = {
-    officerId: String(form.elements.officerId.value || "").trim(),
-    startDate: String(form.elements.startDate.value || "").trim(),
-    endDate: String(form.elements.endDate.value || "").trim(),
-  };
-
   try {
     await request("/api/admin/rotations", {
       method: "POST",
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        officerId: String(form.elements.officerId.value || "").trim(),
+        startDate: String(form.elements.startDate.value || "").trim(),
+        endDate: String(form.elements.endDate.value || "").trim(),
+      }),
     });
     form.reset();
     setMessage("rotation-form-message", "Rotation scheduled successfully.", "success");
@@ -758,46 +690,28 @@ document.getElementById("rotation-form")?.addEventListener("submit", async (even
 document.getElementById("oversight-action-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
-  const pointsAdjustments = [];
-  const penaltyOfficerId = String(form.elements.penaltyOfficerId.value || "").trim();
-  const rewardOfficerId = String(form.elements.rewardOfficerId.value || "").trim();
-  const penaltyPoints = Number(form.elements.penaltyPoints.value || 0);
-  const rewardPoints = Number(form.elements.rewardPoints.value || 0);
-  const comment = String(form.elements.comment.value || "").trim();
-
-  if (penaltyOfficerId && penaltyPoints) {
-    pointsAdjustments.push({
-      officerId: penaltyOfficerId,
-      points: penaltyPoints,
-      message: comment || "Penalty assigned by admin.",
-    });
+  let action = "";
+  if (state.activeOversightTab === "escalated") {
+    action = form.elements.action.value;
+  } else if (state.activeOversightTab === "invalid") {
+    action = form.elements.invalidAction.value;
+  } else {
+    action = form.elements.reviewAction.value;
   }
 
-  if (rewardOfficerId && rewardPoints) {
-    pointsAdjustments.push({
-      officerId: rewardOfficerId,
-      points: rewardPoints,
-      message: comment || "Reward assigned by admin.",
-    });
-  }
-
-  const payload = {
-    action: String(form.elements.action.value || "").trim(),
-    targetOfficeType: String(form.elements.targetOfficeType.value || "").trim(),
-    targetDivisionName: state.departments.find((item) => item.code === String(form.elements.targetDivisionName.value || "").trim())?.name
-      || String(form.elements.targetDivisionName.value || "").trim(),
-    targetSectionName: String(form.elements.targetSectionName.value || "").trim(),
-    targetWardNumber: String(form.elements.targetWardNumber.value || "").trim(),
-    comment,
-    pointsAdjustments,
-  };
+  const targetDepartment = getDepartmentByCode(form.elements.targetDivisionName.value);
 
   try {
     await request(`/api/admin/oversight/${form.elements.tokenNumber.value}`, {
       method: "PATCH",
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        action,
+        targetDivisionName: targetDepartment?.name || "",
+        targetSectionName: String(form.elements.targetSectionName.value || "").trim(),
+        comment: String(form.elements.comment.value || "").trim(),
+      }),
     });
-    setMessage("oversight-form-message", "Admin decision saved successfully.", "success");
+    setMessage("oversight-form-message", "Central admin response recorded.", "success");
     form.reset();
     await loadAllData();
   } catch (error) {
@@ -805,60 +719,39 @@ document.getElementById("oversight-action-form")?.addEventListener("submit", asy
   }
 });
 
+document.getElementById("admin-refresh-button")?.addEventListener("click", loadAllData);
+
+document.getElementById("admin-logout-button")?.addEventListener("click", async () => {
+  try {
+    await request("/api/auth/logout", { method: "POST" });
+  } catch {
+    // Ignore API failure and clear client session.
+  }
+  sessionStorage.removeItem("admin_user");
+  sessionStorage.removeItem("admin_auth_token");
+  window.location.href = "./admin-login.html";
+});
+
 document.addEventListener("click", async (event) => {
-  const editDepartment = event.target.closest("[data-edit-department]");
-  if (editDepartment) {
-    const department = state.departments.find((item) => item.code === editDepartment.dataset.editDepartment);
-    const form = document.getElementById("department-form");
-    if (department && form) {
-      state.activeSection = "management";
-      state.activeManagementTab = "departments";
-      document.querySelector('[data-section="management"]')?.click();
-      document.querySelector('[data-management-tab="departments"]')?.click();
-      form.elements.editingCode.value = department.code;
-      form.elements.code.value = department.code;
-      form.elements.code.disabled = true;
-      form.elements.name.value = department.name;
-      form.elements.type.value = department.type;
-      form.elements.wards.value = department.wards.join(",");
-      form.elements.description.value = department.description || "";
-    }
-    return;
-  }
-
-  const deleteDepartment = event.target.closest("[data-delete-department]");
-  if (deleteDepartment) {
-    try {
-      await request(`/api/admin/departments/${encodeURIComponent(deleteDepartment.dataset.deleteDepartment)}`, {
-        method: "DELETE",
-      });
-      await loadAllData();
-    } catch (error) {
-      setMessage("department-form-message", error.message, "error");
-    }
-    return;
-  }
-
   const editOfficer = event.target.closest("[data-edit-officer]");
   if (editOfficer) {
     const officer = state.officers.find((item) => item.id === editOfficer.dataset.editOfficer);
     const form = document.getElementById("officer-form");
-    if (officer && form) {
-      document.querySelector('[data-section="management"]')?.click();
-      document.querySelector('[data-management-tab="officers"]')?.click();
-      form.elements.editingOfficerId.value = officer.id;
-      form.elements.officeType.value = officer.officeType;
-      form.elements.departmentCode.value = officer.departmentCode || "";
-      form.elements.divisionName.value = officer.divisionName || "";
-      form.elements.sectionName.value = officer.sectionName || "";
-      form.elements.wardNumber.value = officer.wardNumber || "";
-      form.elements.name.value = officer.name || "";
-      form.elements.email.value = officer.email || "";
-      form.elements.phone.value = officer.phone || "";
-      form.elements.loginId.value = officer.loginId || "";
-      form.elements.password.value = "";
-      form.elements.active.checked = officer.status === "active";
-    }
+    if (!officer || !form) return;
+    const inferredDepartmentCode = officer.departmentCode || state.departments.find((item) => item.name === officer.divisionName)?.code || "";
+    document.querySelector('[data-section="officers"]')?.click();
+    form.elements.editingOfficerId.value = officer.id;
+    form.elements.officeType.value = officer.officeType;
+    form.elements.departmentCode.value = inferredDepartmentCode;
+    syncOfficerFormFields();
+    fillSubDepartmentOptions("officer-subdepartment", inferredDepartmentCode, true);
+    form.elements.sectionName.value = officer.sectionName || "";
+    form.elements.wardNumber.value = officer.wardNumber || "";
+    form.elements.name.value = officer.name || "";
+    form.elements.email.value = officer.email || "";
+    form.elements.loginId.value = officer.loginId || "";
+    form.elements.password.value = "";
+    form.elements.active.checked = officer.status === "active";
     return;
   }
 
@@ -870,15 +763,15 @@ document.addEventListener("click", async (event) => {
       await request(`/api/admin/officers/${officer.id}`, {
         method: "PATCH",
         body: JSON.stringify({
-          active: officer.status !== "active",
-          name: officer.name,
-          email: officer.email,
-          phone: officer.phone,
+          officeType: officer.officeType,
           departmentCode: officer.departmentCode,
           divisionName: officer.divisionName,
           sectionName: officer.sectionName,
           wardNumber: officer.wardNumber,
-          assignmentWeeks: officer.assignmentWeeks,
+          name: officer.name,
+          email: officer.email,
+          loginId: officer.loginId,
+          active: officer.status !== "active",
         }),
       });
       await loadAllData();
@@ -896,6 +789,10 @@ document.addEventListener("click", async (event) => {
   }
 });
 
+["analytics-department-filter", "analytics-officer-filter", "analytics-date-from", "analytics-date-to"].forEach((id) => {
+  document.getElementById(id)?.addEventListener("change", renderAnalytics);
+});
+
 document.getElementById("analytics-reset-button")?.addEventListener("click", () => {
   document.getElementById("analytics-department-filter").value = "";
   document.getElementById("analytics-officer-filter").value = "";
@@ -904,29 +801,25 @@ document.getElementById("analytics-reset-button")?.addEventListener("click", () 
   renderAnalytics();
 });
 
-["analytics-department-filter", "analytics-officer-filter", "analytics-date-from", "analytics-date-to"].forEach((id) => {
-  document.getElementById(id)?.addEventListener("change", renderAnalytics);
-});
-
 document.getElementById("analytics-export-csv")?.addEventListener("click", () => {
-  const complaints = getFilteredComplaints();
   const rows = [
     ["Token", "Title", "Department", "Status", "Officer", "Updated"],
-    ...complaints.map((complaint) => [
+    ...getFilteredComplaints().map((complaint) => [
       complaint.tokenNumber,
       complaint.title,
-      complaint.divisionName || `Ward ${complaint.wardNumber || ""}`,
+      complaint.divisionName || `Ward ${complaint.wardNumber || "-"}`,
       complaint.status,
       complaint.assignedOfficerName || "",
       formatDateTime(complaint.updatedAt || complaint.createdAt),
     ]),
   ];
+
   const csv = rows.map((row) => row.map((value) => `"${String(value || "").replaceAll('"', '""')}"`).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "admin-report.csv";
+  link.download = "central-admin-report.csv";
   link.click();
   URL.revokeObjectURL(url);
 });
@@ -936,8 +829,8 @@ document.getElementById("analytics-export-pdf")?.addEventListener("click", () =>
 });
 
 loadAllData().catch((error) => {
-  document.querySelector(".admin-suite-main").innerHTML = `
-    <div class="panel admin-suite-panel">
+  document.querySelector(".admin-orbit-main").innerHTML = `
+    <div class="admin-orbit-panel">
       <div class="form-message error">${error.message}</div>
     </div>
   `;

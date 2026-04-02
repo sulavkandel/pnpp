@@ -51,25 +51,9 @@
               </div>
             </div>
             <form class="auth-form" id="role-login-form">
-              <label>
-                <span data-role-text="portalLabel">पोर्टल छान्नुहोस्</span>
-                <select id="portal-select">
-                  <option value="ward" data-role-text="wardOption">वडा कार्यालय</option>
-                  <option value="department" data-role-text="departmentOption">विभाग</option>
-                </select>
-              </label>
-              <label>
-                <span data-role-text="divisionLabel">महाशाखा छान्नुहोस्</span>
-                <select id="division-select"></select>
-              </label>
-              <label>
-                <span data-role-text="sectionLabel">साखा / युनिट छान्नुहोस्</span>
-                <select id="section-select"></select>
-              </label>
-              <label>
-                <span data-role-text="wardLabel">वडा छान्नुहोस्</span>
-                <select id="ward-select"></select>
-              </label>
+              <div class="login-banner" data-role-text="departmentLoginHint">
+                आफ्नो `Login ID` र `Password` प्रयोग गरेर सिधै लगइन गर्नुहोस्। विभाग वा वडा स्वतः देखाइनेछ।
+              </div>
               <label>
                 <span data-role-text="userLabel">कार्यालय आईडी / युजरनेम</span>
                 <input type="text" name="loginId" data-role-placeholder="userPlaceholder" placeholder="कार्यालय लगइन" />

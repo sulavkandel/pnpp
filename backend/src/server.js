@@ -24,6 +24,18 @@ const routes = [
   "POST /api/auth/admin-login",
   "POST /api/auth/department-login",
   "POST /api/auth/logout",
+  "GET /api/admin/dashboard",
+  "GET /api/admin/departments",
+  "POST /api/admin/departments",
+  "PATCH /api/admin/departments/:code",
+  "DELETE /api/admin/departments/:code",
+  "GET /api/admin/officers",
+  "POST /api/admin/officers",
+  "PATCH /api/admin/officers/:id",
+  "GET /api/admin/rotations",
+  "POST /api/admin/rotations",
+  "GET /api/admin/oversight",
+  "PATCH /api/admin/oversight/:tokenNumber",
   "GET /api/admin/office-accounts",
   "POST /api/admin/office-accounts",
   "GET /api/admin/analytics",
@@ -43,9 +55,9 @@ const routes = [
 ];
 
 const adminCredentials = {
-  loginId: "admin",
+  loginId: "admin@pokharamun.gov.np",
   password: "admin",
-  name: "System Admin",
+  name: "Super Admin",
 };
 
 const sessionDurationMs = 1000 * 60 * 60 * 12;
@@ -139,13 +151,49 @@ function sanitizeOfficeAccount(account) {
     role: account.role,
     name: account.name,
     loginId: account.loginId,
+    email: account.email || "",
+    phone: account.phone || "",
+    departmentCode: account.departmentCode || "",
     divisionName: account.divisionName || "",
     sectionName: account.sectionName || "",
     wardNumber: account.wardNumber || "",
     status: account.status || "active",
-    assignmentWeeks: account.assignmentWeeks || [],
+    assignmentWeeks: getEffectiveAssignmentWeeks(account),
     currentWeekPoints: Number(account.currentWeekPoints || 0),
     allTimePoints: Number(account.allTimePoints || 0),
+  };
+}
+
+function sanitizeDepartment(department) {
+  return {
+    id: String(department._id || department.code),
+    code: department.code,
+    name: department.name,
+    type: department.type || "Mahashakha",
+    wards: department.wards || [],
+    description: department.description || "",
+    active: department.active !== false,
+    createdAt: department.createdAt || null,
+    updatedAt: department.updatedAt || null,
+  };
+}
+
+function sanitizeRotation(rotation) {
+  return {
+    id: String(rotation._id),
+    officerId: String(rotation.officerId),
+    officerName: rotation.officerName,
+    officeType: rotation.officeType,
+    departmentCode: rotation.departmentCode || "",
+    divisionName: rotation.divisionName || "",
+    sectionName: rotation.sectionName || "",
+    wardNumber: rotation.wardNumber || "",
+    startDate: rotation.startDate,
+    endDate: rotation.endDate,
+    weekKeys: rotation.weekKeys || [],
+    active: Boolean(rotation.active),
+    createdBy: rotation.createdBy || "",
+    createdAt: rotation.createdAt || null,
   };
 }
 
@@ -210,6 +258,38 @@ function getCurrentWeekKey() {
   const day = Math.floor((now - start) / 86400000);
   const week = Math.ceil((day + start.getUTCDay() + 1) / 7);
   return `${now.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+function getWeekKeyForDate(value) {
+  const now = new Date(value);
+  const start = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
+  const day = Math.floor((now - start) / 86400000);
+  const week = Math.ceil((day + start.getUTCDay() + 1) / 7);
+  return `${now.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+function getWeekKeysBetween(startDate, endDate) {
+  const keys = new Set();
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const cursor = new Date(start);
+
+  while (cursor.getTime() <= end.getTime()) {
+    keys.add(getWeekKeyForDate(cursor));
+    cursor.setDate(cursor.getDate() + 7);
+  }
+
+  return [...keys];
+}
+
+function getEffectiveAssignmentWeeks(account) {
+  const weeks = Array.isArray(account?.assignmentWeeks)
+    ? account.assignmentWeeks.map((item) => String(item).trim()).filter(Boolean)
+    : [];
+
+  if (weeks.length) return weeks;
+  if (account?.status === "active") return [getCurrentWeekKey()];
+  return [];
 }
 
 function startOfCurrentWeek() {
@@ -647,7 +727,10 @@ function isWithinOfficerOfficeScope(actor, complaint) {
   if (actor.role === "department") {
     return complaint.officeType === "department"
       && complaint.divisionName === (actor.divisionName || "")
-      && complaint.sectionName === (actor.sectionName || "");
+      && (
+        !actor.sectionName
+        || complaint.sectionName === (actor.sectionName || "")
+      );
   }
 
   if (actor.role === "ward") {
@@ -732,6 +815,110 @@ function buildAnalytics(complaints) {
       text: `${item.assignedOfficeLabel} | overdue for first response`,
     })),
   };
+}
+
+function buildSolvedChart(complaints, departments) {
+  return departments.map((department) => {
+    const total = complaints.filter((item) => item.divisionName === department.name).length;
+    const solved = complaints.filter((item) => item.divisionName === department.name && item.status === "solved").length;
+    const percent = total ? Math.round((solved / total) * 100) : 0;
+    return {
+      label: department.name,
+      total,
+      solved,
+      percent,
+    };
+  }).filter((item) => item.total > 0).sort((a, b) => b.total - a.total);
+}
+
+function buildOversightQueue(complaints) {
+  const officerReviewCandidates = complaints.filter((item) =>
+    item.status === "forwarded"
+    || item.status === "escalated"
+    || (item.history || []).some((entry) => ["forwarded", "escalated"].includes(entry.action)));
+
+  return {
+    escalated: complaints
+      .filter((item) => item.status === "escalated" || item.officeType === "central_admin")
+      .map(complaintSummaryForOfficer),
+    invalidPending: complaints
+      .filter((item) => item.status === "pending_admin_verification")
+      .map(complaintSummaryForOfficer),
+    officerActionReviews: officerReviewCandidates.map(complaintSummaryForOfficer),
+  };
+}
+
+function buildAdminDashboard(complaints, departments, officers, rotations) {
+  const now = Date.now();
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+
+  const monthlyComplaints = complaints.filter((item) => new Date(item.createdAt).getTime() >= monthStart.getTime());
+  const solvedCount = monthlyComplaints.filter((item) => item.status === "solved").length;
+  const solvedRate = monthlyComplaints.length ? Math.round((solvedCount / monthlyComplaints.length) * 100) : 0;
+  const oversight = buildOversightQueue(complaints);
+  const activeRotations = rotations.filter((rotation) =>
+    new Date(rotation.startDate).getTime() <= now && new Date(rotation.endDate).getTime() >= now);
+
+  return {
+    overview: {
+      totalComplaintsMonth: monthlyComplaints.length,
+      solvedRate,
+      pending: complaints.filter((item) => ["pending", "in_progress", "delayed", "pending_admin_verification"].includes(item.status)).length,
+      forwarded: complaints.filter((item) => item.status === "forwarded").length,
+      escalated: complaints.filter((item) => item.status === "escalated").length,
+      departments: departments.length,
+      officers: officers.length,
+      activeRotations: activeRotations.length,
+    },
+    charts: {
+      complaintsByDepartment: aggregateCounts(
+        complaints.filter((item) => item.divisionName),
+        (item) => item.divisionName,
+      ).map(([label, count]) => ({ label, count })),
+      solvedByDepartment: buildSolvedChart(complaints, departments),
+    },
+    spotlight: {
+      recentEscalations: oversight.escalated.slice(0, 5),
+      recentInvalid: oversight.invalidPending.slice(0, 5),
+      officerActionReviews: oversight.officerActionReviews.slice(0, 6),
+    },
+  };
+}
+
+function buildOfficerCatalog(accounts, complaints) {
+  return accounts.map((account) => {
+    const performance = computeOfficerPerformance(account, complaints);
+    return {
+      ...sanitizeOfficeAccount(account),
+      complaintsHandled: performance.history.length,
+      currentWeekPoints: performance.currentWeekPoints,
+      allTimePoints: performance.allTimePoints,
+      averageResponseTime: performance.averageResponseTime,
+      complaintsCompletedThisWeek: performance.complaintsCompletedThisWeek,
+    };
+  }).sort((a, b) => b.currentWeekPoints - a.currentWeekPoints || a.name.localeCompare(b.name));
+}
+
+async function applyPerformanceAdjustment(repositories, officerId, adjustment) {
+  const officer = await repositories.officeAccounts.findById(officerId);
+  if (!officer) return false;
+
+  const nextAdjustments = [
+    ...(officer.performanceAdjustments || []),
+    {
+      points: Number(adjustment.points || 0),
+      message: adjustment.message || "",
+      createdAt: new Date(),
+    },
+  ];
+
+  await repositories.officeAccounts.updateOfficeAccount(officerId, {
+    performanceAdjustments: nextAdjustments,
+  });
+
+  return true;
 }
 
 function buildCitizenDashboard(user, complaints) {
@@ -1011,7 +1198,8 @@ async function createServer({ repositories, runtime }) {
         const loginId = String(body.loginId || "").trim();
         const password = String(body.password || "").trim();
 
-        if (loginId !== adminCredentials.loginId || password !== adminCredentials.password) {
+        const validAdminLogins = new Set([adminCredentials.loginId, "admin"]);
+        if (!validAdminLogins.has(loginId) || password !== adminCredentials.password) {
           sendJson(res, 401, { success: false, message: "Invalid admin login credentials." });
           return;
         }
@@ -1046,23 +1234,40 @@ async function createServer({ repositories, runtime }) {
         const loginId = String(body.loginId || "").trim();
         const password = String(body.password || "").trim();
 
-        if (!["department", "ward"].includes(officeType) || !loginId || !password) {
-          sendJson(res, 400, { success: false, message: "Office type, login ID, and password are required." });
+        if (!loginId || !password) {
+          sendJson(res, 400, { success: false, message: "Login ID and password are required." });
           return;
         }
 
-        const officeAccount = await repositories.officeAccounts.findByOfficeTypeAndLoginId(officeType, loginId);
+        let officeAccount = null;
+        if (["department", "ward"].includes(officeType)) {
+          officeAccount = await repositories.officeAccounts.findByOfficeTypeAndLoginId(officeType, loginId);
+        }
+
+        if (!officeAccount) {
+          officeAccount = await repositories.officeAccounts.findByLoginId(loginId);
+        }
+
         if (!officeAccount || officeAccount.passwordHash !== hashPassword(password)) {
           sendJson(res, 401, { success: false, message: "Invalid office login credentials." });
           return;
         }
 
-        if (!(officeAccount.assignmentWeeks || []).includes(getCurrentWeekKey())) {
+        const resolvedOfficeType = officeAccount.officeType;
+        const effectiveAssignmentWeeks = getEffectiveAssignmentWeeks(officeAccount);
+        if (!effectiveAssignmentWeeks.includes(getCurrentWeekKey())) {
           sendJson(res, 403, { success: false, message: "No active duty this week" });
           return;
         }
 
-        if (officeType === "department" && (officeAccount.divisionName !== divisionName || officeAccount.sectionName !== sectionName)) {
+        if (
+          resolvedOfficeType === "department"
+          && divisionName
+          && (
+            officeAccount.divisionName !== divisionName
+            || (officeAccount.sectionName && officeAccount.sectionName !== sectionName)
+          )
+        ) {
           sendJson(res, 401, {
             success: false,
             message: "Selected department details do not match the assigned login credentials.",
@@ -1070,7 +1275,7 @@ async function createServer({ repositories, runtime }) {
           return;
         }
 
-        if (officeType === "ward" && String(officeAccount.wardNumber) !== String(wardNumber)) {
+        if (resolvedOfficeType === "ward" && wardNumber && String(officeAccount.wardNumber) !== String(wardNumber)) {
           sendJson(res, 401, {
             success: false,
             message: "Selected ward does not match the assigned login credentials.",
@@ -1082,17 +1287,17 @@ async function createServer({ repositories, runtime }) {
           principalId: String(officeAccount._id),
           role: officeAccount.role,
           name: officeAccount.name,
-          officeType: officeAccount.officeType,
+          officeType: resolvedOfficeType,
           loginId: officeAccount.loginId,
           divisionName: officeAccount.divisionName || "",
           sectionName: officeAccount.sectionName || "",
           wardNumber: officeAccount.wardNumber || "",
-          assignmentWeeks: officeAccount.assignmentWeeks || [],
+          assignmentWeeks: effectiveAssignmentWeeks,
         });
 
         sendJson(res, 200, {
           success: true,
-          message: `${officeType === "ward" ? "Ward" : "Department"} login successful.`,
+          message: `${resolvedOfficeType === "ward" ? "Ward" : "Department"} login successful.`,
           token: session.token,
           expiresAt: session.expiresAt,
           user: sanitizeOfficeAccount(officeAccount),
@@ -1106,6 +1311,239 @@ async function createServer({ repositories, runtime }) {
           await repositories.sessions.revokeSession(hashValue(rawToken));
         }
         sendJson(res, 200, { success: true, message: "Logged out." });
+        return;
+      }
+
+      if (method === "GET" && pathname === "/api/admin/dashboard") {
+        const actor = await requireAuth(req, res, repositories, ["admin"]);
+        if (!actor) return;
+
+        const [complaints, departments, officers, rotations] = await Promise.all([
+          repositories.complaints.listAll(),
+          repositories.departments.listDepartments(),
+          repositories.officeAccounts.listAll(),
+          repositories.admin.listRotations(),
+        ]);
+
+        sendJson(res, 200, {
+          success: true,
+          dashboard: buildAdminDashboard(complaints, departments, officers, rotations),
+        });
+        return;
+      }
+
+      if (pathname === "/api/admin/departments") {
+        const actor = await requireAuth(req, res, repositories, ["admin"]);
+        if (!actor) return;
+
+        if (method === "GET") {
+          const departments = await repositories.departments.listDepartments();
+          sendJson(res, 200, {
+            success: true,
+            departments: departments.map(sanitizeDepartment),
+          });
+          return;
+        }
+
+        if (method === "POST") {
+          const body = await readJsonBody(req);
+          const code = String(body.code || "").trim().toUpperCase();
+          const name = String(body.name || "").trim();
+          const type = String(body.type || "Mahashakha").trim();
+          const wards = Array.isArray(body.wards) ? body.wards.map((item) => String(item).trim()).filter(Boolean) : [];
+          const description = String(body.description || "").trim();
+
+          if (!code || !name) {
+            sendJson(res, 400, { success: false, message: "Department code and name are required." });
+            return;
+          }
+
+          const existing = await repositories.departments.findByCode(code);
+          if (existing) {
+            sendJson(res, 409, { success: false, message: "Department code already exists." });
+            return;
+          }
+
+          const payload = {
+            code,
+            name,
+            type,
+            wards,
+            description,
+            active: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+
+          const result = await repositories.departments.createDepartment(payload);
+          await repositories.admin.logAdminAction({
+            action: "create_department",
+            code,
+            createdBy: actor.name,
+            createdAt: new Date(),
+          });
+
+          sendJson(res, 201, {
+            success: true,
+            department: sanitizeDepartment({ _id: result.insertedId, ...payload }),
+          });
+          return;
+        }
+      }
+
+      if (pathname === "/api/admin/officers") {
+        const actor = await requireAuth(req, res, repositories, ["admin"]);
+        if (!actor) return;
+
+        if (method === "GET") {
+          const [accounts, complaints] = await Promise.all([
+            repositories.officeAccounts.listAll(),
+            repositories.complaints.listAll(),
+          ]);
+
+          sendJson(res, 200, {
+            success: true,
+            officers: buildOfficerCatalog(accounts, complaints),
+          });
+          return;
+        }
+
+        if (method === "POST") {
+          const body = await readJsonBody(req);
+          const officeType = String(body.officeType || "department").trim();
+          const name = String(body.name || "").trim();
+          const loginId = String(body.loginId || "").trim();
+          const password = String(body.password || "").trim();
+          const email = String(body.email || "").trim();
+          const phone = String(body.phone || "").trim();
+          const departmentCode = String(body.departmentCode || "").trim().toUpperCase();
+          const divisionName = String(body.divisionName || "").trim();
+          const sectionName = String(body.sectionName || "").trim();
+          const wardNumber = String(body.wardNumber || "").trim();
+          const active = body.active !== false;
+
+          if (!name || !loginId || !password) {
+            sendJson(res, 400, { success: false, message: "Name, login ID, and password are required." });
+            return;
+          }
+
+          const existingOfficeAccount = await repositories.officeAccounts.findByLoginId(loginId);
+          if (existingOfficeAccount) {
+            sendJson(res, 409, { success: false, message: "This login ID is already in use." });
+            return;
+          }
+
+          const payload = {
+            role: officeType === "ward" ? "ward" : "department",
+            officeType,
+            departmentCode,
+            divisionName: officeType === "department" ? divisionName : "",
+            sectionName: officeType === "department" ? sectionName : "",
+            wardNumber: officeType === "ward" ? wardNumber : "",
+            name,
+            email,
+            phone,
+            loginId,
+            passwordHash: hashPassword(password),
+            status: active ? "active" : "inactive",
+            assignmentWeeks: active ? [getCurrentWeekKey()] : [],
+            currentWeekPoints: 0,
+            allTimePoints: 0,
+            performanceAdjustments: [],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+
+          const result = await repositories.officeAccounts.createOfficeAccount(payload);
+          await repositories.admin.logAdminAction({
+            action: "create_officer",
+            officerName: name,
+            loginId,
+            createdBy: actor.name,
+            createdAt: new Date(),
+          });
+
+          sendJson(res, 201, {
+            success: true,
+            officer: sanitizeOfficeAccount({ _id: result.insertedId, ...payload }),
+          });
+          return;
+        }
+      }
+
+      if (pathname === "/api/admin/rotations") {
+        const actor = await requireAuth(req, res, repositories, ["admin"]);
+        if (!actor) return;
+
+        if (method === "GET") {
+          const rotations = await repositories.admin.listRotations();
+          sendJson(res, 200, {
+            success: true,
+            rotations: rotations.map(sanitizeRotation),
+          });
+          return;
+        }
+
+        if (method === "POST") {
+          const body = await readJsonBody(req);
+          const officerId = String(body.officerId || "").trim();
+          const startDate = String(body.startDate || "").trim();
+          const endDate = String(body.endDate || "").trim();
+
+          if (!officerId || !startDate || !endDate) {
+            sendJson(res, 400, { success: false, message: "Officer, start date, and end date are required." });
+            return;
+          }
+
+          const officer = await repositories.officeAccounts.findById(officerId);
+          if (!officer) {
+            sendJson(res, 404, { success: false, message: "Officer not found." });
+            return;
+          }
+
+          const weekKeys = getWeekKeysBetween(startDate, endDate);
+          const rotationPayload = {
+            officerId,
+            officerName: officer.name,
+            officeType: officer.officeType,
+            departmentCode: officer.departmentCode || "",
+            divisionName: officer.divisionName || "",
+            sectionName: officer.sectionName || "",
+            wardNumber: officer.wardNumber || "",
+            startDate,
+            endDate,
+            weekKeys,
+            active: new Date(startDate).getTime() <= Date.now() && new Date(endDate).getTime() >= Date.now(),
+            createdBy: actor.name,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+
+          const currentWeeks = new Set(officer.assignmentWeeks || []);
+          weekKeys.forEach((key) => currentWeeks.add(key));
+          await repositories.officeAccounts.updateOfficeAccount(officerId, {
+            assignmentWeeks: [...currentWeeks].sort(),
+            status: officer.status || "active",
+          });
+          const result = await repositories.admin.createRotation(rotationPayload);
+
+          sendJson(res, 201, {
+            success: true,
+            rotation: sanitizeRotation({ _id: result.insertedId, ...rotationPayload }),
+          });
+          return;
+        }
+      }
+
+      if (method === "GET" && pathname === "/api/admin/oversight") {
+        const actor = await requireAuth(req, res, repositories, ["admin"]);
+        if (!actor) return;
+
+        const complaints = await repositories.complaints.listAll();
+        sendJson(res, 200, {
+          success: true,
+          oversight: buildOversightQueue(complaints),
+        });
         return;
       }
 
@@ -1309,12 +1747,210 @@ async function createServer({ repositories, runtime }) {
         return;
       }
 
+      const departmentCodeMatch = pathname.match(/^\/api\/admin\/departments\/([^/]+)$/);
+      const officerIdMatch = pathname.match(/^\/api\/admin\/officers\/([^/]+)$/);
+      const oversightDecisionMatch = pathname.match(/^\/api\/admin\/oversight\/([^/]+)$/);
       const complaintTokenMatch = pathname.match(/^\/api\/complaints\/([^/]+)$/);
       const complaintCommentMatch = pathname.match(/^\/api\/complaints\/([^/]+)\/comments$/);
       const complaintStatusMatch = pathname.match(/^\/api\/complaints\/([^/]+)\/status$/);
       const complaintEtaMatch = pathname.match(/^\/api\/complaints\/([^/]+)\/eta$/);
       const complaintForwardMatch = pathname.match(/^\/api\/complaints\/([^/]+)\/forward$/);
       const complaintFeedbackMatch = pathname.match(/^\/api\/complaints\/([^/]+)\/feedback$/);
+
+      if (departmentCodeMatch) {
+        const actor = await requireAuth(req, res, repositories, ["admin"]);
+        if (!actor) return;
+
+        const code = decodeURIComponent(departmentCodeMatch[1]);
+
+        if (method === "PATCH") {
+          const department = await repositories.departments.findByCode(code);
+          if (!department) {
+            sendJson(res, 404, { success: false, message: "Department not found." });
+            return;
+          }
+
+          const body = await readJsonBody(req);
+          const patch = {
+            name: String(body.name || department.name).trim(),
+            type: String(body.type || department.type || "Mahashakha").trim(),
+            wards: Array.isArray(body.wards) ? body.wards.map((item) => String(item).trim()).filter(Boolean) : department.wards || [],
+            description: body.description !== undefined ? String(body.description || "").trim() : department.description || "",
+            active: body.active === undefined ? department.active !== false : Boolean(body.active),
+          };
+
+          await repositories.departments.updateDepartment(code, patch);
+          sendJson(res, 200, {
+            success: true,
+            department: sanitizeDepartment({ ...department, ...patch }),
+          });
+          return;
+        }
+
+        if (method === "DELETE") {
+          await repositories.departments.deleteDepartment(code);
+          sendJson(res, 200, { success: true, message: "Department deleted." });
+          return;
+        }
+      }
+
+      if (officerIdMatch && method === "PATCH") {
+        const actor = await requireAuth(req, res, repositories, ["admin"]);
+        if (!actor) return;
+
+        const officer = await repositories.officeAccounts.findById(officerIdMatch[1]);
+        if (!officer) {
+          sendJson(res, 404, { success: false, message: "Officer not found." });
+          return;
+        }
+
+        const body = await readJsonBody(req);
+        const requestedLoginId = body.loginId !== undefined ? String(body.loginId || "").trim() : officer.loginId;
+        if (requestedLoginId && requestedLoginId !== officer.loginId) {
+          const existingLogin = await repositories.officeAccounts.findByLoginId(requestedLoginId);
+          if (existingLogin && String(existingLogin._id) !== String(officer._id)) {
+            sendJson(res, 409, { success: false, message: "This login ID is already in use." });
+            return;
+          }
+        }
+        const nextWeeks = Array.isArray(body.assignmentWeeks)
+          ? body.assignmentWeeks.map((item) => String(item).trim()).filter(Boolean)
+          : getEffectiveAssignmentWeeks(officer);
+        const patch = {
+          name: body.name !== undefined ? String(body.name || "").trim() : officer.name,
+          loginId: requestedLoginId,
+          email: body.email !== undefined ? String(body.email || "").trim() : officer.email || "",
+          phone: body.phone !== undefined ? String(body.phone || "").trim() : officer.phone || "",
+          departmentCode: body.departmentCode !== undefined ? String(body.departmentCode || "").trim().toUpperCase() : officer.departmentCode || "",
+          divisionName: body.divisionName !== undefined ? String(body.divisionName || "").trim() : officer.divisionName || "",
+          sectionName: body.sectionName !== undefined ? String(body.sectionName || "").trim() : officer.sectionName || "",
+          wardNumber: body.wardNumber !== undefined ? String(body.wardNumber || "").trim() : officer.wardNumber || "",
+          status: body.active === undefined ? officer.status || "active" : (body.active ? "active" : "inactive"),
+          assignmentWeeks: body.active === false ? [] : (nextWeeks.length ? nextWeeks : [getCurrentWeekKey()]),
+        };
+
+        if (body.password) {
+          patch.passwordHash = hashPassword(String(body.password));
+        }
+
+        await repositories.officeAccounts.updateOfficeAccount(String(officer._id), patch);
+        sendJson(res, 200, {
+          success: true,
+          officer: sanitizeOfficeAccount({ ...officer, ...patch }),
+        });
+        return;
+      }
+
+      if (oversightDecisionMatch && method === "PATCH") {
+        const actor = await requireAuth(req, res, repositories, ["admin"]);
+        if (!actor) return;
+
+        const tokenNumber = oversightDecisionMatch[1];
+        const complaint = await repositories.complaints.findByTokenNumber(tokenNumber);
+        if (!complaint) {
+          sendJson(res, 404, { success: false, message: "Complaint not found." });
+          return;
+        }
+
+        const body = await readJsonBody(req);
+        const action = String(body.action || "").trim();
+        const comment = String(body.comment || "").trim();
+        const targetOfficeType = String(body.targetOfficeType || "").trim();
+        const targetDivisionName = String(body.targetDivisionName || "").trim();
+        const targetSectionName = String(body.targetSectionName || "").trim();
+        const targetWardNumber = String(body.targetWardNumber || "").trim();
+        const pointsAdjustments = Array.isArray(body.pointsAdjustments) ? body.pointsAdjustments : [];
+
+        for (const adjustment of pointsAdjustments) {
+          if (adjustment?.officerId) {
+            await applyPerformanceAdjustment(repositories, String(adjustment.officerId), {
+              points: Number(adjustment.points || 0),
+              message: String(adjustment.message || comment || "Admin performance adjustment."),
+            });
+          }
+        }
+
+        if (action === "approve_invalid") {
+          await repositories.complaints.updateComplaint(tokenNumber, {
+            status: "closed_invalid",
+            validityVerified: true,
+            pointsAwarded: 0,
+            closureConfirmedAt: new Date(),
+            escalated: false,
+          });
+        } else if (action === "reject_invalid") {
+          await repositories.complaints.updateComplaint(tokenNumber, {
+            status: complaint.acceptedByOfficerId ? "in_progress" : "pending",
+            validityVerified: false,
+          });
+        } else if (action === "cannot_solve") {
+          await repositories.complaints.updateComplaint(tokenNumber, {
+            status: "cannot_solve",
+            closureConfirmedAt: new Date(),
+            escalated: false,
+          });
+        } else if (action === "reassign") {
+          const forwardingResult = targetOfficeType === "ward" && targetWardNumber
+            ? await assignSpecificOffice(repositories, {
+              officeType: "ward",
+              wardNumber: targetWardNumber,
+            })
+            : await assignSpecificOffice(repositories, {
+              officeType: "department",
+              divisionName: targetDivisionName,
+              sectionName: targetSectionName,
+            });
+
+          await repositories.complaints.updateComplaint(tokenNumber, {
+            status: "pending",
+            officeType: forwardingResult.officeType,
+            divisionName: forwardingResult.divisionName || "",
+            sectionName: forwardingResult.sectionName || "",
+            wardNumber: forwardingResult.wardNumber || complaint.wardNumber || "",
+            routeBucket: forwardingResult.routeBucket,
+            assignedOfficerId: forwardingResult.assignedOfficer ? String(forwardingResult.assignedOfficer._id) : "",
+            assignedOfficerName: forwardingResult.assignedOfficer ? forwardingResult.assignedOfficer.name : "",
+            assignedDepartment: forwardingResult.divisionName || (forwardingResult.officeType === "ward" ? `Ward ${forwardingResult.wardNumber}` : "Central Admin"),
+            assignedOfficeLabel:
+              forwardingResult.officeType === "ward"
+                ? `Ward ${forwardingResult.wardNumber}`
+                : forwardingResult.officeType === "central_admin"
+                  ? "Central Admin"
+                  : `${forwardingResult.divisionName} / ${forwardingResult.sectionName}`,
+            escalated: forwardingResult.officeType === "central_admin",
+            forwardedTo: "Reassigned by Central Admin",
+            forwardedToLabel: "Reassigned by Central Admin",
+            acceptedAt: null,
+            acceptedByOfficerId: "",
+          });
+        } else if (action === "restore_in_progress") {
+          await repositories.complaints.updateComplaint(tokenNumber, {
+            status: "in_progress",
+            escalated: false,
+          });
+        } else if (action === "approve_forward") {
+          await repositories.complaints.updateComplaint(tokenNumber, {
+            escalated: false,
+          });
+        } else {
+          sendJson(res, 400, { success: false, message: "Invalid oversight action." });
+          return;
+        }
+
+        if (comment) {
+          await appendCommentAndHistory(repositories, complaint, actor, comment, "public");
+        }
+        await appendHistoryEntry(
+          repositories,
+          complaint,
+          actor,
+          "admin_decision",
+          `${action}${comment ? ` | ${comment}` : ""}`,
+        );
+
+        sendJson(res, 200, { success: true, message: "Admin decision recorded." });
+        return;
+      }
 
       if (complaintTokenMatch && method === "GET") {
         const actor = await requireAuth(req, res, repositories, ["citizen", "department", "ward", "admin"]);

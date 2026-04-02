@@ -13,6 +13,23 @@ function currentWeekKey() {
 const dataDir = path.resolve(process.cwd(), "data");
 const dataFile = path.join(dataDir, "local-store.json");
 
+const seededDepartments = [
+  { code: "ADMIN", name: "Administration", type: "Mahashakha", wards: [], active: true },
+  { code: "FIN", name: "Finance & Revenue", type: "Mahashakha", wards: [], active: true },
+  { code: "INFRA", name: "Infrastructure Development", type: "Mahashakha", wards: Array.from({ length: 33 }, (_, i) => String(i + 1)), active: true },
+  { code: "URBAN", name: "Urban Dev & Environment", type: "Mahashakha", wards: Array.from({ length: 33 }, (_, i) => String(i + 1)), active: true },
+  { code: "PLANIT", name: "Planning, Monitoring & IT", type: "Mahashakha", wards: [], active: true },
+  { code: "SOCIAL", name: "Social Development", type: "Mahashakha", wards: Array.from({ length: 33 }, (_, i) => String(i + 1)), active: true },
+  { code: "HEALTH", name: "Health", type: "Mahashakha", wards: Array.from({ length: 33 }, (_, i) => String(i + 1)), active: true },
+  { code: "EDU", name: "Education", type: "Mahashakha", wards: Array.from({ length: 33 }, (_, i) => String(i + 1)), active: true },
+  { code: "ECON", name: "Economic Development", type: "Mahashakha", wards: Array.from({ length: 33 }, (_, i) => String(i + 1)), active: true },
+  { code: "LEGAL", name: "Legal", type: "Mahashakha", wards: [], active: true },
+].map((department) => ({
+  ...department,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+}));
+
 const defaultStore = {
   users: [],
   officeAccounts: [
@@ -54,6 +71,8 @@ const defaultStore = {
   complaints: [],
   complaintComments: [],
   complaintStatusHistory: [],
+  departments: seededDepartments,
+  rotations: [],
   adminLogs: [],
 };
 
@@ -69,7 +88,21 @@ function ensureStoreFile() {
 
 function readStore() {
   ensureStoreFile();
-  return JSON.parse(fs.readFileSync(dataFile, "utf8"));
+  const parsed = JSON.parse(fs.readFileSync(dataFile, "utf8"));
+  const merged = {
+    ...defaultStore,
+    ...parsed,
+  };
+
+  if (!Array.isArray(merged.departments) || !merged.departments.length) {
+    merged.departments = seededDepartments;
+  }
+
+  if (!Array.isArray(merged.rotations)) {
+    merged.rotations = [];
+  }
+
+  return merged;
 }
 
 function writeStore(store) {
@@ -137,6 +170,9 @@ export function createLocalRepositories() {
       },
       async listByOfficeType(officeType) {
         return readStore().officeAccounts.filter((item) => item.officeType === officeType);
+      },
+      async listAll() {
+        return readStore().officeAccounts;
       },
     },
     sessions: {
@@ -244,13 +280,71 @@ export function createLocalRepositories() {
           .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
       },
     },
-    departments: {},
-    wards: {},
+    departments: {
+      async listDepartments() {
+        return (readStore().departments || []).sort((a, b) => a.name.localeCompare(b.name));
+      },
+      async findByCode(code) {
+        return (readStore().departments || []).find((item) => item.code === code) || null;
+      },
+      async createDepartment(payload) {
+        const store = readStore();
+        const insertedId = makeId("dept");
+        store.departments = store.departments || [];
+        store.departments.push({ _id: insertedId, ...payload });
+        writeStore(store);
+        return { insertedId };
+      },
+      async updateDepartment(code, patch) {
+        const store = readStore();
+        const department = (store.departments || []).find((item) => item.code === code);
+        if (department) {
+          Object.assign(department, patch, { updatedAt: new Date().toISOString() });
+        }
+        writeStore(store);
+        return { acknowledged: true };
+      },
+      async deleteDepartment(code) {
+        const store = readStore();
+        store.departments = (store.departments || []).filter((item) => item.code !== code);
+        writeStore(store);
+        return { acknowledged: true };
+      },
+    },
+    wards: {
+      async listWards() {
+        return Array.from({ length: 33 }, (_, index) => ({
+          wardNumber: String(index + 1),
+          chairperson: "",
+          secretary: "",
+          officeCode: `WARD-${index + 1}`,
+        }));
+      },
+      async findByWardNumber(wardNumber) {
+        return {
+          wardNumber: String(wardNumber),
+          chairperson: "",
+          secretary: "",
+          officeCode: `WARD-${wardNumber}`,
+        };
+      },
+    },
     admin: {
       async logAdminAction(payload) {
         const store = readStore();
         const insertedId = makeId("adminlog");
         store.adminLogs.push({ _id: insertedId, ...payload });
+        writeStore(store);
+        return { insertedId };
+      },
+      async listRotations() {
+        return (readStore().rotations || []).sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+      },
+      async createRotation(payload) {
+        const store = readStore();
+        const insertedId = makeId("rotation");
+        store.rotations = store.rotations || [];
+        store.rotations.push({ _id: insertedId, ...payload });
         writeStore(store);
         return { insertedId };
       },

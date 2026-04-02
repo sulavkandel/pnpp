@@ -11,5 +11,22 @@ export function getDepartmentRepository() {
     findByCode(code) {
       return collection.findOne({ code });
     },
+    createDepartment(payload) {
+      return collection.insertOne(payload);
+    },
+    updateDepartment(code, patch) {
+      return collection.updateOne(
+        { code },
+        {
+          $set: {
+            ...patch,
+            updatedAt: new Date(),
+          },
+        },
+      );
+    },
+    deleteDepartment(code) {
+      return collection.deleteOne({ code });
+    },
   };
 }

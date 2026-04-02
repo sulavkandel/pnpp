@@ -1,0 +1,17 @@
+export const RotationModelShape = {
+  id: "ObjectId|string",
+  officerId: "ObjectId|string",
+  officerName: "string",
+  officeType: "department | ward",
+  departmentCode: "optional string",
+  divisionName: "optional string",
+  sectionName: "optional string",
+  wardNumber: "optional string",
+  startDate: "Date|string",
+  endDate: "Date|string",
+  weekKeys: ["YYYY-WNN keys"],
+  active: "boolean",
+  createdBy: "string",
+  createdAt: "Date",
+  updatedAt: "Date",
+};

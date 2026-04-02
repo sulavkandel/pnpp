@@ -60,8 +60,8 @@ const translations = {
       subtitle: "Administrator access page",
       eyebrow: "एडमिन पहुँच",
       formTitle: "एडमिन प्यानलमा लगइन",
-      userLabel: "एडमिन युजरनेम",
-      userPlaceholder: "Admin username",
+      userLabel: "प्रयोगकर्ता नाम / इमेल",
+      userPlaceholder: "admin@pokharamun.gov.np",
       passwordLabel: "पासवर्ड",
       passwordPlaceholder: "पासवर्ड प्रविष्ट गर्नुहोस्",
       button: "एडमिन प्यानलमा लगइन",
@@ -76,8 +76,8 @@ const translations = {
       subtitle: "Administrator access page",
       eyebrow: "Admin access",
       formTitle: "Login to admin panel",
-      userLabel: "Admin username",
-      userPlaceholder: "Admin username",
+      userLabel: "Username / email",
+      userPlaceholder: "admin@pokharamun.gov.np",
       passwordLabel: "Password",
       passwordPlaceholder: "Enter password",
       button: "Login to admin panel",
@@ -240,7 +240,7 @@ if (loginForm && loginMessage) {
       }
 
       const successText =
-        payload.officeType === "ward"
+        result.user?.officeType === "ward"
           ? translations[pageRole][currentLanguage].wardSuccess
           : translations[pageRole][currentLanguage].departmentSuccess;
 

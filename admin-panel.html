@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin Panel</title>
+    <title>Central Admin Panel</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -13,203 +13,490 @@
     <link rel="stylesheet" href="./frontend/src/styles/main.css" />
     <script type="module" src="./frontend/src/scripts/admin-panel.js"></script>
   </head>
-  <body>
-    <div class="topbar">
-      <div class="container topbar-inner">
-        <div class="topbar-brand" id="admin-panel-title">एडमिन प्यानल</div>
-        <div class="topbar-meta">
-          <div class="lang-switch">
-            <button type="button" class="lang-chip active" data-lang="ne">नेपाली</button>
-            <button type="button" class="lang-chip" data-lang="en">English</button>
+  <body class="admin-suite-body">
+    <div class="admin-suite-shell">
+      <header class="admin-suite-topbar">
+        <div class="admin-suite-topbar-line">
+          <div>
+            <p class="admin-suite-topline">जनसेवा · पोखरा महानगरपालिका · केन्द्रीय प्रशासन</p>
+            <h1>Central Admin Panel</h1>
           </div>
-          <button type="button" class="button secondary compact-button" id="admin-logout-button">लगआउट</button>
+          <div class="admin-suite-topbar-meta">
+            <div class="admin-suite-date" id="admin-live-date"></div>
+            <button type="button" class="button secondary compact-button" id="admin-refresh-button">Refresh</button>
+            <button type="button" class="button compact-button" id="admin-logout-button">Logout</button>
+          </div>
         </div>
+        <div class="admin-suite-hero">
+          <div class="brand">
+            <div class="brand-mark crest">नेपाल</div>
+            <div>
+              <p class="eyebrow small">Pokhara Mahanagarpalika</p>
+              <h2>सुपर एडमिन ड्यासबोर्ड</h2>
+              <p class="brand-subtitle">Manage departments, officers, rotations, complaint verification, and city-level analytics.</p>
+            </div>
+          </div>
+          <div class="admin-suite-usercard">
+            <div>
+              <p class="eyebrow small">Signed in</p>
+              <strong id="admin-user-name">Super Admin</strong>
+              <p id="admin-user-role">Central Administration</p>
+            </div>
+            <div class="admin-suite-avatar" id="admin-user-avatar">SA</div>
+          </div>
+        </div>
+      </header>
+
+      <div class="admin-suite-layout">
+        <aside class="admin-suite-sidebar">
+          <p class="admin-suite-sidebar-label">मुख्य मेनु</p>
+          <button type="button" class="admin-nav-link active" data-section="dashboard">
+            <span>Dashboard</span>
+            <strong id="nav-total-complaints">0</strong>
+          </button>
+          <button type="button" class="admin-nav-link" data-section="management">
+            <span>Departments / Officers</span>
+            <strong id="nav-total-officers">0</strong>
+          </button>
+          <button type="button" class="admin-nav-link" data-section="oversight">
+            <span>Complaint Review</span>
+            <strong id="nav-oversight-count">0</strong>
+          </button>
+          <button type="button" class="admin-nav-link" data-section="analytics">
+            <span>Analytics & Reports</span>
+            <strong id="nav-solved-rate">0%</strong>
+          </button>
+          <button type="button" class="admin-nav-link" data-section="settings">
+            <span>System Settings</span>
+            <strong id="nav-active-rotations">0</strong>
+          </button>
+        </aside>
+
+        <main class="admin-suite-main">
+          <section class="admin-section active" id="section-dashboard">
+            <div class="admin-kpi-grid" id="admin-overview-cards"></div>
+
+            <div class="admin-chart-grid">
+              <article class="panel admin-suite-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small">Complaints by Department</p>
+                    <h3>This month</h3>
+                  </div>
+                </div>
+                <div id="dashboard-department-chart"></div>
+              </article>
+
+              <article class="panel admin-suite-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small">Solved by Department</p>
+                    <h3>Resolution percentage</h3>
+                  </div>
+                </div>
+                <div id="dashboard-solved-chart"></div>
+              </article>
+            </div>
+
+            <div class="admin-spotlight-grid">
+              <article class="panel admin-suite-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small">Escalated to Admin</p>
+                    <h3>Recent escalations</h3>
+                  </div>
+                </div>
+                <div id="dashboard-escalations-list"></div>
+              </article>
+              <article class="panel admin-suite-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small">Invalid Complaints Pending</p>
+                    <h3>Awaiting verification</h3>
+                  </div>
+                </div>
+                <div id="dashboard-invalid-list"></div>
+              </article>
+              <article class="panel admin-suite-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small">Officer Action Reviews</p>
+                    <h3>Needs admin decision</h3>
+                  </div>
+                </div>
+                <div id="dashboard-reviews-list"></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="admin-section" id="section-management">
+            <div class="admin-management-tabs">
+              <button type="button" class="admin-subtab active" data-management-tab="departments">Departments</button>
+              <button type="button" class="admin-subtab" data-management-tab="officers">Officers</button>
+              <button type="button" class="admin-subtab" data-management-tab="rotations">Rotations</button>
+            </div>
+
+            <div class="admin-management-panel active" id="management-departments">
+              <div class="admin-management-grid">
+                <article class="panel admin-suite-panel">
+                  <div class="panel-header">
+                    <div>
+                      <p class="eyebrow small">Add / Edit Department</p>
+                      <h3>विभाग व्यवस्थापन</h3>
+                    </div>
+                  </div>
+                  <form class="admin-form-grid" id="department-form">
+                    <input type="hidden" name="editingCode" />
+                    <label>
+                      <span>Department Code</span>
+                      <input type="text" name="code" placeholder="INFRA" required />
+                    </label>
+                    <label>
+                      <span>Department Name</span>
+                      <input type="text" name="name" placeholder="Infrastructure Development" required />
+                    </label>
+                    <label>
+                      <span>Type</span>
+                      <select name="type">
+                        <option value="Mahashakha">Mahashakha</option>
+                        <option value="Upa-Sakha">Upa-Sakha</option>
+                        <option value="Ward Office">Ward Office</option>
+                      </select>
+                    </label>
+                    <label>
+                      <span>Covered Wards</span>
+                      <input type="text" name="wards" placeholder="1,2,3 or leave blank for city-wide" />
+                    </label>
+                    <label class="admin-form-span-2">
+                      <span>Description</span>
+                      <textarea name="description" rows="4" placeholder="Department mandate and service area"></textarea>
+                    </label>
+                    <div class="admin-form-actions admin-form-span-2">
+                      <button type="submit" class="button">Save Department</button>
+                      <button type="button" class="button secondary" id="department-reset-button">Reset</button>
+                    </div>
+                  </form>
+                  <div class="form-message" id="department-form-message"></div>
+                </article>
+
+                <article class="panel admin-suite-panel">
+                  <div class="panel-header">
+                    <div>
+                      <p class="eyebrow small">Department List</p>
+                      <h3>Configured departments</h3>
+                    </div>
+                  </div>
+                  <div id="departments-list"></div>
+                </article>
+              </div>
+            </div>
+
+            <div class="admin-management-panel" id="management-officers">
+              <div class="admin-management-grid">
+                <article class="panel admin-suite-panel">
+                  <div class="panel-header">
+                    <div>
+                      <p class="eyebrow small">Add / Edit Officer</p>
+                      <h3>अधिकृत व्यवस्थापन</h3>
+                    </div>
+                  </div>
+                  <form class="admin-form-grid" id="officer-form">
+                    <input type="hidden" name="editingOfficerId" />
+                    <label>
+                      <span>Office Type</span>
+                      <select name="officeType" id="officer-office-type">
+                        <option value="department">Department</option>
+                        <option value="ward">Ward</option>
+                      </select>
+                    </label>
+                    <label>
+                      <span>Department</span>
+                      <select name="departmentCode" id="officer-department-code"></select>
+                    </label>
+                    <label>
+                      <span>Division Name</span>
+                      <input type="text" name="divisionName" placeholder="Infrastructure Development" />
+                    </label>
+                    <label>
+                      <span>Section / Unit</span>
+                      <input type="text" name="sectionName" placeholder="Road Section" />
+                    </label>
+                    <label>
+                      <span>Ward Number</span>
+                      <input type="text" name="wardNumber" placeholder="17" />
+                    </label>
+                    <label>
+                      <span>Officer Name</span>
+                      <input type="text" name="name" placeholder="Suresh Thapa" required />
+                    </label>
+                    <label>
+                      <span>Email</span>
+                      <input type="email" name="email" placeholder="officer@pokharamun.gov.np" />
+                    </label>
+                    <label>
+                      <span>Phone</span>
+                      <input type="text" name="phone" placeholder="98XXXXXXXX" />
+                    </label>
+                    <label>
+                      <span>Login ID</span>
+                      <input type="text" name="loginId" placeholder="infra_officer_01" required />
+                    </label>
+                    <label>
+                      <span>Password</span>
+                      <input type="password" name="password" placeholder="Set password" />
+                    </label>
+                    <label class="admin-inline-check">
+                      <input type="checkbox" name="active" checked />
+                      <span>Officer active</span>
+                    </label>
+                    <div class="admin-form-actions admin-form-span-2">
+                      <button type="submit" class="button">Save Officer</button>
+                      <button type="button" class="button secondary" id="officer-reset-button">Reset</button>
+                    </div>
+                  </form>
+                  <div class="form-message" id="officer-form-message"></div>
+                </article>
+
+                <article class="panel admin-suite-panel">
+                  <div class="panel-header">
+                    <div>
+                      <p class="eyebrow small">Officer List</p>
+                      <h3>Assigned officers</h3>
+                    </div>
+                  </div>
+                  <div id="officers-list"></div>
+                </article>
+              </div>
+            </div>
+
+            <div class="admin-management-panel" id="management-rotations">
+              <div class="admin-management-grid">
+                <article class="panel admin-suite-panel">
+                  <div class="panel-header">
+                    <div>
+                      <p class="eyebrow small">Rotation Scheduler</p>
+                      <h3>साप्ताहिक ड्यूटी तालिका</h3>
+                    </div>
+                  </div>
+                  <form class="admin-form-grid" id="rotation-form">
+                    <label class="admin-form-span-2">
+                      <span>Officer</span>
+                      <select name="officerId" id="rotation-officer-select" required></select>
+                    </label>
+                    <label>
+                      <span>Start Date</span>
+                      <input type="date" name="startDate" required />
+                    </label>
+                    <label>
+                      <span>End Date</span>
+                      <input type="date" name="endDate" required />
+                    </label>
+                    <div class="admin-form-actions admin-form-span-2">
+                      <button type="submit" class="button">Schedule Rotation</button>
+                    </div>
+                  </form>
+                  <div class="form-message" id="rotation-form-message"></div>
+                </article>
+
+                <article class="panel admin-suite-panel">
+                  <div class="panel-header">
+                    <div>
+                      <p class="eyebrow small">Current & Upcoming</p>
+                      <h3>Rotation history</h3>
+                    </div>
+                  </div>
+                  <div id="rotations-list"></div>
+                </article>
+              </div>
+            </div>
+          </section>
+
+          <section class="admin-section" id="section-oversight">
+            <div class="admin-management-tabs">
+              <button type="button" class="admin-subtab active" data-oversight-tab="escalated">Escalated</button>
+              <button type="button" class="admin-subtab" data-oversight-tab="invalid">Invalid Pending</button>
+              <button type="button" class="admin-subtab" data-oversight-tab="reviews">Officer Reviews</button>
+            </div>
+
+            <div class="admin-oversight-layout">
+              <article class="panel admin-suite-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small">Oversight Queue</p>
+                    <h3 id="oversight-list-title">Escalated complaints</h3>
+                  </div>
+                </div>
+                <div id="oversight-list"></div>
+              </article>
+
+              <article class="panel admin-suite-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small">Decision Workspace</p>
+                    <h3>Admin review</h3>
+                  </div>
+                </div>
+                <div id="oversight-detail-empty" class="admin-empty-state">
+                  Select a complaint from the queue to review its history and record an admin decision.
+                </div>
+                <div id="oversight-detail" class="admin-oversight-detail hidden"></div>
+                <form class="admin-form-grid hidden" id="oversight-action-form">
+                  <input type="hidden" name="tokenNumber" />
+                  <label class="admin-form-span-2">
+                    <span>Admin Action</span>
+                    <select name="action" id="oversight-action-select">
+                      <option value="reassign">Reassign to another office</option>
+                      <option value="cannot_solve">Mark as Cannot be Solved</option>
+                      <option value="approve_invalid">Approve invalid marking</option>
+                      <option value="reject_invalid">Reject invalid marking</option>
+                      <option value="approve_forward">Approve officer forwarding</option>
+                      <option value="restore_in_progress">Restore to In Progress</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Target Office Type</span>
+                    <select name="targetOfficeType" id="oversight-target-type">
+                      <option value="department">Department</option>
+                      <option value="ward">Ward</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Target Department</span>
+                    <select name="targetDivisionName" id="oversight-target-division"></select>
+                  </label>
+                  <label>
+                    <span>Target Section</span>
+                    <input type="text" name="targetSectionName" placeholder="Road Section" />
+                  </label>
+                  <label>
+                    <span>Target Ward</span>
+                    <input type="text" name="targetWardNumber" placeholder="12" />
+                  </label>
+                  <label>
+                    <span>Penalty Officer</span>
+                    <select name="penaltyOfficerId" id="oversight-penalty-officer"></select>
+                  </label>
+                  <label>
+                    <span>Penalty Points</span>
+                    <input type="number" name="penaltyPoints" placeholder="-10" />
+                  </label>
+                  <label>
+                    <span>Reward Officer</span>
+                    <select name="rewardOfficerId" id="oversight-reward-officer"></select>
+                  </label>
+                  <label>
+                    <span>Reward Points</span>
+                    <input type="number" name="rewardPoints" placeholder="10" />
+                  </label>
+                  <label class="admin-form-span-2">
+                    <span>Comment / Decision Note</span>
+                    <textarea name="comment" rows="4" placeholder="Explain the decision for audit trail"></textarea>
+                  </label>
+                  <div class="admin-form-actions admin-form-span-2">
+                    <button type="submit" class="button">Record Decision</button>
+                  </div>
+                </form>
+                <div class="form-message" id="oversight-form-message"></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="admin-section" id="section-analytics">
+            <div class="admin-analytics-toolbar panel admin-suite-panel">
+              <div class="admin-filter-grid">
+                <label>
+                  <span>Department</span>
+                  <select id="analytics-department-filter"></select>
+                </label>
+                <label>
+                  <span>Officer</span>
+                  <select id="analytics-officer-filter"></select>
+                </label>
+                <label>
+                  <span>Date From</span>
+                  <input type="date" id="analytics-date-from" />
+                </label>
+                <label>
+                  <span>Date To</span>
+                  <input type="date" id="analytics-date-to" />
+                </label>
+              </div>
+              <div class="admin-form-actions">
+                <button type="button" class="button secondary" id="analytics-reset-button">Reset Filters</button>
+                <button type="button" class="button secondary" id="analytics-export-csv">Export CSV</button>
+                <button type="button" class="button" id="analytics-export-pdf">Export PDF</button>
+              </div>
+            </div>
+
+            <div class="admin-kpi-grid" id="analytics-summary-cards"></div>
+
+            <div class="admin-chart-grid">
+              <article class="panel admin-suite-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small">In Progress vs Pending</p>
+                    <h3>Status mix</h3>
+                  </div>
+                </div>
+                <div id="analytics-status-chart"></div>
+              </article>
+              <article class="panel admin-suite-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small">Forwarding Breakdown</p>
+                    <h3>Department vs central admin</h3>
+                  </div>
+                </div>
+                <div id="analytics-forward-chart"></div>
+              </article>
+            </div>
+
+            <div class="admin-chart-grid">
+              <article class="panel admin-suite-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small">Officer Performance</p>
+                    <h3>Points leaderboard</h3>
+                  </div>
+                </div>
+                <div id="analytics-officer-leaderboard"></div>
+              </article>
+              <article class="panel admin-suite-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small">Complaint Register</p>
+                    <h3>Filtered report</h3>
+                  </div>
+                </div>
+                <div id="analytics-report-table"></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="admin-section" id="section-settings">
+            <div class="admin-chart-grid">
+              <article class="panel admin-suite-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small">System Health</p>
+                    <h3>Runtime status</h3>
+                  </div>
+                </div>
+                <div class="admin-settings-stack" id="settings-runtime"></div>
+              </article>
+              <article class="panel admin-suite-panel">
+                <div class="panel-header">
+                  <div>
+                    <p class="eyebrow small">Security & Access</p>
+                    <h3>Central admin session</h3>
+                  </div>
+                </div>
+                <div class="admin-settings-stack" id="settings-security"></div>
+              </article>
+            </div>
+          </section>
+        </main>
       </div>
     </div>
-
-    <header class="portal-header">
-      <div class="container masthead-inner">
-        <div class="brand">
-          <div class="brand-mark crest">नेपाल</div>
-          <div>
-            <p class="eyebrow small" id="admin-gov-label">नेपाल सरकार</p>
-            <h1 class="font-devanagari" id="admin-main-title">केन्द्रिय प्रशासन प्यानल</h1>
-            <p class="brand-subtitle" id="admin-subtitle">Departments, sections, and ward oversight</p>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <main>
-      <section class="section">
-        <div class="container">
-          <div class="login-banner" id="admin-welcome-banner"></div>
-
-          <div class="action-strip">
-            <a href="./add-department-admin.html" class="button dark" id="add-department-admin-button">Add Department Admin</a>
-          </div>
-
-          <div class="summary-row" id="admin-status-summary"></div>
-
-          <div class="panel top-gap">
-            <div class="panel-header">
-              <div>
-                <p class="eyebrow small" id="sla-alerts-eyebrow">SLA Alerts</p>
-                <h3 id="sla-alerts-title">First-response SLA breach alerts</h3>
-              </div>
-            </div>
-            <div id="sla-alerts-list"></div>
-          </div>
-
-          <div class="dashboard-button-row" id="admin-dashboard-buttons">
-            <button type="button" class="button secondary dashboard-tab active" data-tab="department-complaints" id="btn-department-complaints">
-              Complain Based on Department
-            </button>
-            <button type="button" class="button secondary dashboard-tab" data-tab="solved-complaints" id="btn-solved-complaints">
-              Solved Complain
-            </button>
-            <button type="button" class="button secondary dashboard-tab" data-tab="progress-complaints" id="btn-progress-complaints">
-              In Progress
-            </button>
-            <button type="button" class="button secondary dashboard-tab" data-tab="pending-complaints" id="btn-pending-complaints">
-              Pending Complain
-            </button>
-            <button type="button" class="button secondary dashboard-tab" data-tab="forwarded-complaints" id="btn-forwarded-complaints">
-              Forwarded Complain
-            </button>
-            <button type="button" class="button secondary dashboard-tab" data-tab="central-admin-complaints" id="btn-central-admin-complaints">
-              Central Admin Escalations
-            </button>
-          </div>
-
-          <section class="dashboard-panel active" id="department-complaints-panel">
-            <div class="grid two-col admin-analytics-grid">
-              <div class="panel">
-                <div class="panel-header">
-                  <div>
-                    <p class="eyebrow small" id="dept-graph-eyebrow">विभागीय गुनासो</p>
-                    <h3 id="dept-graph-title">विभाग अनुसार गुनासो ग्राफ</h3>
-                  </div>
-                </div>
-                <div id="department-complaint-graph"></div>
-              </div>
-              <div class="panel">
-                <div class="panel-header">
-                  <div>
-                    <p class="eyebrow small" id="ward-graph-eyebrow">वडागत गुनासो</p>
-                    <h3 id="ward-graph-title">वडा अनुसार गुनासो ग्राफ</h3>
-                  </div>
-                </div>
-                <div id="ward-complaint-graph"></div>
-              </div>
-            </div>
-          </section>
-
-          <section class="dashboard-panel" id="solved-complaints-panel">
-            <div class="grid two-col admin-analytics-grid">
-              <div class="panel">
-                <div class="panel-header">
-                  <div>
-                    <p class="eyebrow small" id="solved-graph-eyebrow">समाधान भएका गुनासो</p>
-                    <h3 id="solved-graph-title">समाधान प्रतिशत</h3>
-                  </div>
-                </div>
-                <div id="solved-complaint-graph"></div>
-              </div>
-              <div class="panel">
-                <div class="panel-header">
-                  <div>
-                    <p class="eyebrow small" id="solved-summary-eyebrow">समाधान सारांश</p>
-                    <h3 id="solved-summary-title">विभाग अनुसार समाधान स्थिति</h3>
-                  </div>
-                </div>
-                <div id="solved-summary-list"></div>
-              </div>
-            </div>
-          </section>
-
-          <section class="dashboard-panel" id="progress-complaints-panel">
-            <div class="grid two-col admin-analytics-grid">
-              <div class="panel">
-                <div class="panel-header">
-                  <div>
-                    <p class="eyebrow small" id="progress-dept-eyebrow">कार्य प्रगतिमा</p>
-                    <h3 id="progress-dept-title">विभाग अनुसार कार्य प्रगतिमा</h3>
-                  </div>
-                </div>
-                <div id="progress-department-graph"></div>
-              </div>
-              <div class="panel">
-                <div class="panel-header">
-                  <div>
-                    <p class="eyebrow small" id="progress-ward-eyebrow">वडागत प्रगति</p>
-                    <h3 id="progress-ward-title">वडा अनुसार कार्य प्रगतिमा</h3>
-                  </div>
-                </div>
-                <div id="progress-ward-graph"></div>
-              </div>
-            </div>
-          </section>
-
-          <section class="dashboard-panel" id="pending-complaints-panel">
-            <div class="grid two-col admin-analytics-grid">
-              <div class="panel">
-                <div class="panel-header">
-                  <div>
-                    <p class="eyebrow small" id="pending-graph-eyebrow">समयसीमा नाघेका गुनासो</p>
-                    <h3 id="pending-graph-title">पेन्डिङ गुनासो ग्राफ</h3>
-                  </div>
-                </div>
-                <div id="pending-complaint-graph"></div>
-              </div>
-              <div class="panel">
-                <div class="panel-header">
-                  <div>
-                    <p class="eyebrow small" id="pending-list-eyebrow">पेन्डिङ सूची</p>
-                    <h3 id="pending-list-title">समयसीमा नाघेका गुनासोहरू</h3>
-                  </div>
-                </div>
-                <div id="pending-complaint-list"></div>
-              </div>
-            </div>
-          </section>
-
-          <section class="dashboard-panel" id="forwarded-complaints-panel">
-            <div class="panel">
-              <div class="panel-header">
-                <div>
-                  <p class="eyebrow small" id="forwarded-list-eyebrow">फर्वार्ड गरिएका गुनासो</p>
-                  <h3 id="forwarded-list-title">विभाग / वडा बाट फर्वार्ड गरिएको सूची</h3>
-                </div>
-              </div>
-              <div id="forwarded-complaint-list"></div>
-            </div>
-          </section>
-
-          <section class="dashboard-panel" id="central-admin-complaints-panel">
-            <div class="grid two-col admin-analytics-grid">
-              <div class="panel">
-                <div class="panel-header">
-                  <div>
-                    <p class="eyebrow small" id="central-admin-graph-eyebrow">केन्द्रीय प्रशासनमा पुगेका गुनासो</p>
-                    <h3 id="central-admin-graph-title">केन्द्रीय प्रशासनलाई तोकिएका गुनासो</h3>
-                  </div>
-                </div>
-                <div id="central-admin-complaint-graph"></div>
-              </div>
-              <div class="panel">
-                <div class="panel-header">
-                  <div>
-                    <p class="eyebrow small" id="central-admin-list-eyebrow">एस्केलेसन सूची</p>
-                    <h3 id="central-admin-list-title">वडा वा विभागले समाधान गर्न नसकेका गुनासोहरू</h3>
-                  </div>
-                </div>
-                <div id="central-admin-complaint-list"></div>
-              </div>
-            </div>
-          </section>
-        </div>
-      </section>
-    </main>
   </body>
 </html>

@@ -27,7 +27,7 @@ export const ComplaintModelShape = {
   assignedOfficerName: "optional string",
   acceptedAt: "optional Date",
   acceptedByOfficerId: "optional ObjectId|string",
-  status: "pending | forwarded | in_progress | delayed | solved | escalated | pending_admin_verification",
+  status: "pending | forwarded | in_progress | delayed | solved | escalated | pending_admin_verification | closed_invalid | cannot_solve",
   estimatedCompletionAt: "optional Date|string",
   slaDueAt: "Date",
   firstResponseAt: "optional Date",

@@ -32,5 +32,8 @@ export function getOfficeAccountRepository() {
     listByOfficeType(officeType) {
       return collection.find({ officeType }).toArray();
     },
+    listAll() {
+      return collection.find({}).toArray();
+    },
   };
 }

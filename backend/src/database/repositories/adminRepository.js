@@ -3,10 +3,12 @@ import { collectionNames, getCollection } from "../collections.js";
 export function getAdminRepository() {
   const adminLogs = getCollection(collectionNames.adminLogs);
   const complaints = getCollection(collectionNames.complaints);
+  const rotations = getCollection(collectionNames.rotations);
 
   return {
     adminLogs,
     complaints,
+    rotations,
     logAdminAction(payload) {
       return adminLogs.insertOne(payload);
     },
@@ -25,6 +27,12 @@ export function getAdminRepository() {
           { $sort: { total: -1 } },
         ])
         .toArray();
+    },
+    listRotations() {
+      return rotations.find({}).sort({ startDate: -1 }).toArray();
+    },
+    createRotation(payload) {
+      return rotations.insertOne(payload);
     },
   };
 }

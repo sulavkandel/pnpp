@@ -1,0 +1,8 @@
+node_modules
+backend/node_modules
+backend/data/local-store.json
+docker-compose.yml
+Dockerfile
+backend/Dockerfile
+*.md
+.git

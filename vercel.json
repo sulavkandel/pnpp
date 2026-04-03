@@ -1,0 +1,5 @@
+{
+  "buildCommand": "node -e \"require('fs').writeFileSync('config.js', 'window.__PNPP_CONFIG__={apiBaseUrl:\\\"' + (process.env.API_BASE_URL || '') + '\\\"};')\"",
+  "installCommand": "echo 'no install needed'",
+  "outputDirectory": "."
+}

@@ -1,5 +1,4 @@
 export const apiBase = globalThis?.window?.__PNPP_CONFIG__?.apiBaseUrl
-  || process.env.NEXT_PUBLIC_API_BASE_URL
   || "http://localhost:4000";
 
 export const appRoutes = {

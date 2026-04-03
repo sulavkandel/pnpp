@@ -1,0 +1,10 @@
+@import "../src/styles/main.css";
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+}

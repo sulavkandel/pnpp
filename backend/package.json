@@ -3,11 +3,15 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "engines": {
+    "node": ">=20 <23"
+  },
   "dependencies": {
     "dotenv": "^16.4.5",
     "mongodb": "^6.8.0"
   },
   "scripts": {
+    "check:mongo": "node src/checkMongo.js",
     "dev": "node src/server.js",
     "start": "node src/server.js"
   }

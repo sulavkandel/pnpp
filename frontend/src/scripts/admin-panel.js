@@ -1,9 +1,9 @@
-const apiBase = "http://localhost:4000";
+import { apiBase, appRoutes } from "./runtime-config.js";
 const storedAdmin = sessionStorage.getItem("admin_user");
 const adminAuthToken = sessionStorage.getItem("admin_auth_token");
 
 if (!storedAdmin || !adminAuthToken) {
-  window.location.replace("./admin-login.html");
+  window.location.replace(appRoutes.adminLogin);
 }
 
 const adminUser = storedAdmin ? JSON.parse(storedAdmin) : null;
@@ -115,6 +115,128 @@ function renderBarStack(targetId, items, formatter = (item) => `${item.count}`) 
   `;
 }
 
+// Chart.js instance store — destroy before re-creating to avoid canvas reuse errors
+const chartInstances = {};
+
+const CHART_COLORS = {
+  blue: "rgba(26,58,107,0.85)",
+  green: "rgba(40,167,69,0.85)",
+  amber: "rgba(255,193,7,0.85)",
+  red: "rgba(220,53,69,0.85)",
+  teal: "rgba(32,178,170,0.85)",
+  purple: "rgba(111,66,193,0.85)",
+  palette: ["#1a3a6b","#2ecc71","#f39c12","#e74c3c","#3498db","#9b59b6","#1abc9c","#e67e22","#e91e63","#00bcd4"],
+};
+
+function destroyChart(id) {
+  if (chartInstances[id]) {
+    chartInstances[id].destroy();
+    delete chartInstances[id];
+  }
+}
+
+function renderHorizontalBarChart(canvasId, items, labelKey = "label", valueKey = "count") {
+  destroyChart(canvasId);
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  if (!items || !items.length) {
+    canvas.parentElement.innerHTML = `<div class="admin-empty-state">No data available.</div>`;
+    return;
+  }
+  chartInstances[canvasId] = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: items.map((item) => item[labelKey]),
+      datasets: [{
+        label: "Complaints",
+        data: items.map((item) => item[valueKey] || 0),
+        backgroundColor: CHART_COLORS.palette.slice(0, items.length),
+        borderRadius: 4,
+      }],
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+    },
+  });
+}
+
+function renderSolvedByDeptChart(canvasId, items) {
+  destroyChart(canvasId);
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  if (!items || !items.length) {
+    canvas.parentElement.innerHTML = `<div class="admin-empty-state">No data available.</div>`;
+    return;
+  }
+  chartInstances[canvasId] = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: items.map((item) => item.label),
+      datasets: [
+        {
+          label: "Solved",
+          data: items.map((item) => item.solved || 0),
+          backgroundColor: CHART_COLORS.green,
+          borderRadius: 4,
+        },
+        {
+          label: "Total",
+          data: items.map((item) => (item.total || 0) - (item.solved || 0)),
+          backgroundColor: "rgba(200,200,200,0.5)",
+          borderRadius: 4,
+        },
+      ],
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: "bottom" },
+        tooltip: {
+          callbacks: {
+            afterTitle: (tooltipItems) => {
+              const item = items[tooltipItems[0].dataIndex];
+              return `${item.percent || 0}% resolved`;
+            },
+          },
+        },
+      },
+      scales: { x: { beginAtZero: true, stacked: false, ticks: { precision: 0 } }, y: { stacked: false } },
+    },
+  });
+}
+
+function renderDoughnutChart(canvasId, items, labelKey = "label", valueKey = "count") {
+  destroyChart(canvasId);
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  if (!items || !items.length) {
+    canvas.parentElement.innerHTML = `<div class="admin-empty-state">No data available.</div>`;
+    return;
+  }
+  chartInstances[canvasId] = new Chart(canvas, {
+    type: "doughnut",
+    data: {
+      labels: items.map((item) => item[labelKey]),
+      datasets: [{
+        data: items.map((item) => item[valueKey] || 0),
+        backgroundColor: [CHART_COLORS.amber, CHART_COLORS.blue, CHART_COLORS.green, CHART_COLORS.red, CHART_COLORS.teal, CHART_COLORS.purple],
+        borderWidth: 2,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom" } },
+    },
+  });
+}
+
 function renderCompactCards(targetId, items, emptyText) {
   const node = document.getElementById(targetId);
   if (!node) return;
@@ -166,8 +288,8 @@ function renderDashboard() {
     { label: "Active officers", value: overview.officers, note: `${overview.activeRotations} active rotations` },
   ]);
 
-  renderBarStack("dashboard-department-chart", charts.complaintsByDepartment);
-  renderBarStack("dashboard-solved-chart", charts.solvedByDepartment, (item) => `${item.solved}/${item.total} · ${item.percent}%`);
+  renderHorizontalBarChart("dashboard-department-chart", charts.complaintsByDepartment);
+  renderSolvedByDeptChart("dashboard-solved-chart", charts.solvedByDepartment);
 
   renderCompactCards("dashboard-escalations-list", state.oversight.escalated.slice(0, 4), "No escalated complaints right now.");
   renderCompactCards("dashboard-invalid-list", state.oversight.invalidPending.slice(0, 4), "No invalid complaints awaiting verification.");
@@ -259,6 +381,25 @@ function renderActiveOfficerGroups() {
     wardGroups.set(key, list);
   });
 
+  const renderPendingAdjustments = (officer) => {
+    const pending = (officer.performanceAdjustments || [])
+      .map((adj, idx) => ({ ...adj, idx }))
+      .filter((adj) => adj.status === "pending");
+    if (!pending.length) return "";
+    return `
+      <div class="admin-orbit-pending-adjustments">
+        <strong style="font-size:0.75rem;color:#c9a227">⏳ Pending point adjustments:</strong>
+        ${pending.map((adj) => `
+          <div class="admin-orbit-adj-row">
+            <span>${adj.points > 0 ? "+" : ""}${adj.points} pts — ${adj.message || "No reason"}</span>
+            <button type="button" class="button compact-button" data-verify-adj="${officer.id}" data-adj-idx="${adj.idx}" data-adj-action="verify" style="padding:2px 8px;font-size:0.7rem">Verify</button>
+            <button type="button" class="button secondary compact-button" data-verify-adj="${officer.id}" data-adj-idx="${adj.idx}" data-adj-action="reject" style="padding:2px 8px;font-size:0.7rem">Reject</button>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  };
+
   const renderGroup = (title, items) => `
     <section class="admin-orbit-group">
       <h4>${title}</h4>
@@ -272,10 +413,21 @@ function renderActiveOfficerGroups() {
                   <span class="admin-orbit-pill success">Active</span>
                 </div>
                 <p>${officer.loginId} · ${officer.email || "No email"}</p>
-                <small>Active until ${formatDate(officer.activationExpiresAt)}</small>
-                <div class="admin-orbit-card-actions">
+                <div style="display:flex;gap:12px;font-size:0.8rem;margin:4px 0">
+                  <span>Week pts: <strong>${officer.currentWeekPoints || 0}</strong></span>
+                  <span>All-time: <strong>${officer.allTimePoints || 0}</strong></span>
+                </div>
+                ${renderPendingAdjustments(officer)}
+                <div class="admin-orbit-card-actions" style="flex-wrap:wrap;gap:4px">
                   <button type="button" class="button secondary compact-button" data-edit-officer="${officer.id}">Edit</button>
                   <button type="button" class="button secondary compact-button" data-toggle-officer="${officer.id}">Deactivate</button>
+                  <button type="button" class="button compact-button" data-adjust-points="${officer.id}" style="background:#c9a227;border-color:#c9a227">± Points</button>
+                </div>
+                <div class="admin-orbit-points-form" id="points-form-${officer.id}" style="display:none;margin-top:8px;padding:8px;background:#f8f9fa;border-radius:6px">
+                  <input type="number" placeholder="Points (+/−)" id="points-value-${officer.id}" style="width:90px;margin-right:6px;padding:4px 8px;border:1px solid #ddd;border-radius:4px" />
+                  <input type="text" placeholder="Reason (required)" id="points-reason-${officer.id}" style="width:160px;margin-right:6px;padding:4px 8px;border:1px solid #ddd;border-radius:4px" />
+                  <button type="button" class="button compact-button" data-submit-points="${officer.id}" style="padding:4px 10px">Apply</button>
+                  <span id="points-msg-${officer.id}" style="font-size:0.75rem;margin-left:6px"></span>
                 </div>
               </article>
             `,
@@ -427,6 +579,14 @@ function renderOversightDetail() {
           <p>${complaint.reviewMeta.note || "-"}</p>
         </div>
       ` : ""}
+      ${complaint.handoverFlag ? `
+        <div class="admin-orbit-review-note" style="background:#fff8e1;border-left:4px solid #c9a227;padding:10px;margin-top:10px;border-radius:4px">
+          <strong style="color:#c9a227">⚑ Handover Flag</strong>
+          <p style="margin:4px 0">Flagged by: <strong>${complaint.handoverFlag.flaggedByOfficerName || "Officer"}</strong></p>
+          <p style="margin:4px 0">Reason: ${complaint.handoverFlag.reason}</p>
+          <p style="margin:4px 0;font-size:0.75rem;color:#666">Status: <strong>${complaint.handoverFlagStatus || "pending"}</strong> · ${new Date(complaint.handoverFlag.flaggedAt).toLocaleString()}</p>
+        </div>
+      ` : ""}
     </div>
   `;
 }
@@ -447,6 +607,32 @@ function getFilteredComplaints() {
   });
 }
 
+function renderDepartmentList() {
+  const node = document.getElementById("dept-list");
+  if (!node) return;
+  const depts = state.departments || [];
+  document.getElementById("nav-dept-count").textContent = depts.length;
+
+  if (!depts.length) {
+    node.innerHTML = `<div class="admin-empty-state">No departments registered.</div>`;
+    return;
+  }
+
+  node.innerHTML = depts.map((dept) => `
+    <article class="admin-orbit-card" style="margin-bottom:8px">
+      <div class="admin-orbit-card-head">
+        <strong>${dept.name}</strong>
+        <span class="admin-orbit-pill ${dept.active !== false ? "success" : ""}">${dept.code}</span>
+      </div>
+      <p style="font-size:0.8rem;color:#666">${dept.type || "Mahashakha"} ${dept.description ? "· " + dept.description : ""}</p>
+      <div class="admin-orbit-card-actions">
+        <button type="button" class="button secondary compact-button" data-edit-dept="${dept.code}">Edit</button>
+        <button type="button" class="button secondary compact-button" style="color:#e74c3c;border-color:#e74c3c" data-delete-dept="${dept.code}">Delete</button>
+      </div>
+    </article>
+  `).join("");
+}
+
 function renderAnalytics() {
   fillDepartmentOptions("analytics-department-filter", true);
   fillOfficerSelect("analytics-officer-filter", true);
@@ -465,14 +651,16 @@ function renderAnalytics() {
     { label: "Forward / higher-level", value: forwarded + higherLevel, note: "Requires coordination", tone: "danger" },
   ]);
 
-  renderBarStack("analytics-status-chart", [
+  renderDoughnutChart("analytics-status-chart", [
     { label: "Pending", count: pending },
     { label: "In Progress", count: inProgress },
     { label: "Solved", count: solved },
     { label: "Delayed", count: complaints.filter((item) => item.status === "delayed").length },
+    { label: "Forwarded", count: forwarded },
+    { label: "Escalated", count: higherLevel },
   ]);
 
-  renderBarStack("analytics-forward-chart", [
+  renderHorizontalBarChart("analytics-forward-chart", [
     { label: "Transferred to department", count: forwarded },
     { label: "Transferred to higher level", count: higherLevel },
   ]);
@@ -550,6 +738,7 @@ function renderEverything() {
   renderOversightList();
   renderOversightDetail();
   renderAnalytics();
+  renderDepartmentList();
 }
 
 function setMessage(targetId, message, tone = "") {
@@ -729,7 +918,7 @@ document.getElementById("admin-logout-button")?.addEventListener("click", async 
   }
   sessionStorage.removeItem("admin_user");
   sessionStorage.removeItem("admin_auth_token");
-  window.location.href = "./admin-login.html";
+  window.location.href = appRoutes.adminLogin;
 });
 
 document.addEventListener("click", async (event) => {
@@ -781,6 +970,57 @@ document.addEventListener("click", async (event) => {
     return;
   }
 
+  // Toggle points adjustment inline form
+  const adjustPoints = event.target.closest("[data-adjust-points]");
+  if (adjustPoints) {
+    const officerId = adjustPoints.dataset.adjustPoints;
+    const form = document.getElementById(`points-form-${officerId}`);
+    if (form) form.style.display = form.style.display === "none" ? "block" : "none";
+    return;
+  }
+
+  // Submit manual points adjustment (pending → admin verifies)
+  const submitPoints = event.target.closest("[data-submit-points]");
+  if (submitPoints) {
+    const officerId = submitPoints.dataset.submitPoints;
+    const pts = parseInt(document.getElementById(`points-value-${officerId}`)?.value || "0", 10);
+    const reason = (document.getElementById(`points-reason-${officerId}`)?.value || "").trim();
+    const msgEl = document.getElementById(`points-msg-${officerId}`);
+    if (!pts || !reason) {
+      if (msgEl) { msgEl.textContent = "Points and reason are required."; msgEl.style.color = "red"; }
+      return;
+    }
+    try {
+      await request(`/api/admin/officers/${officerId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ performanceAdjustment: { points: pts, message: reason, pending: true } }),
+      });
+      if (msgEl) { msgEl.textContent = "Saved — awaiting your verification."; msgEl.style.color = "green"; }
+      await loadAllData();
+    } catch (err) {
+      if (msgEl) { msgEl.textContent = err.message; msgEl.style.color = "red"; }
+    }
+    return;
+  }
+
+  // Verify or reject a pending adjustment
+  const verifyAdj = event.target.closest("[data-verify-adj]");
+  if (verifyAdj) {
+    const officerId = verifyAdj.dataset.verifyAdj;
+    const adjIdx = verifyAdj.dataset.adjIdx;
+    const adjAction = verifyAdj.dataset.adjAction;
+    try {
+      await request(`/api/admin/officers/${officerId}/adjustments/${adjIdx}`, {
+        method: "PATCH",
+        body: JSON.stringify({ action: adjAction }),
+      });
+      await loadAllData();
+    } catch (err) {
+      alert(err.message);
+    }
+    return;
+  }
+
   const selectOversight = event.target.closest("[data-select-oversight]");
   if (selectOversight) {
     state.selectedOversightToken = selectOversight.dataset.selectOversight;
@@ -826,6 +1066,68 @@ document.getElementById("analytics-export-csv")?.addEventListener("click", () =>
 
 document.getElementById("analytics-export-pdf")?.addEventListener("click", () => {
   window.print();
+});
+
+// Department form — create or update
+document.getElementById("dept-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const editingCode = form.elements.editingCode.value.trim();
+  const payload = {
+    code: form.elements.code.value.trim().toUpperCase(),
+    name: form.elements.name.value.trim(),
+    type: form.elements.type.value,
+    description: form.elements.description.value.trim(),
+    active: true,
+  };
+  try {
+    if (editingCode) {
+      await request(`/api/admin/departments/${editingCode}`, { method: "PATCH", body: JSON.stringify(payload) });
+      setMessage("dept-form-message", "Department updated.", "success");
+    } else {
+      await request("/api/admin/departments", { method: "POST", body: JSON.stringify(payload) });
+      setMessage("dept-form-message", "Department created.", "success");
+    }
+    form.reset();
+    form.elements.editingCode.value = "";
+    await loadAllData();
+  } catch (err) {
+    setMessage("dept-form-message", err.message, "error");
+  }
+});
+
+document.getElementById("dept-reset-button")?.addEventListener("click", () => {
+  document.getElementById("dept-form")?.reset();
+  document.getElementById("dept-editing-code").value = "";
+  setMessage("dept-form-message", "");
+});
+
+// Department edit / delete via event delegation
+document.addEventListener("click", async (event) => {
+  const editDept = event.target.closest("[data-edit-dept]");
+  if (editDept) {
+    const dept = state.departments.find((d) => d.code === editDept.dataset.editDept);
+    if (!dept) return;
+    document.querySelector('[data-section="departments"]')?.click();
+    document.getElementById("dept-editing-code").value = dept.code;
+    document.getElementById("dept-code").value = dept.code;
+    document.getElementById("dept-name").value = dept.name;
+    document.getElementById("dept-type").value = dept.type || "Mahashakha";
+    document.getElementById("dept-description").value = dept.description || "";
+    return;
+  }
+
+  const deleteDept = event.target.closest("[data-delete-dept]");
+  if (deleteDept) {
+    const code = deleteDept.dataset.deleteDept;
+    if (!confirm(`Delete department ${code}? This cannot be undone.`)) return;
+    try {
+      await request(`/api/admin/departments/${code}`, { method: "DELETE" });
+      await loadAllData();
+    } catch (err) {
+      alert(err.message);
+    }
+  }
 });
 
 loadAllData().catch((error) => {

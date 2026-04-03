@@ -1,3 +1,5 @@
+import { apiBase, appRoutes } from "./runtime-config.js";
+
 const translations = {
   ne: {
     topbarTitle: "पोखरा महानगरपालिका नागरिक सेवा पोर्टल",
@@ -37,7 +39,7 @@ const translations = {
     signupFailed: "दर्ता गर्न सकिएन। फेरि प्रयास गर्नुहोस्।",
     trackEyebrow: "ट्र्याकिङ",
     trackTitle: "गुनासोको स्थिति हेर्नुहोस्",
-    trackField: "गुनासो नम्बर वा मोबाइल नम्बर",
+    trackField: "गुनासो नम्बर, गोप्य कोड वा मोबाइल",
     trackNow: "ट्र्याक गर्नुहोस्",
     trackStatus: "हालको स्थिति: कार्य प्रगतिमा",
     trackNotFound: "गुनासो भेटिएन।",
@@ -66,7 +68,7 @@ const translations = {
     placeholderCreatePassword: "पासवर्ड बनाउनुहोस्",
     placeholderOfficeLogin: "कार्यालय लगइन",
     placeholderAdmin: "Admin username",
-    placeholderTrack: "PMC-2026-001245 वा 98XXXXXXXX",
+    placeholderTrack: "PMC-2026-001245, गोप्य कोड वा 98XXXXXXXX",
   },
   en: {
     topbarTitle: "Pokhara Mahanagarpalika Citizen Service Portal",
@@ -106,7 +108,7 @@ const translations = {
     signupFailed: "Registration failed. Please try again.",
     trackEyebrow: "Tracking",
     trackTitle: "Check complaint status",
-    trackField: "Complaint ID or mobile number",
+    trackField: "Complaint ID, anonymous code, or mobile",
     trackNow: "Track now",
     trackStatus: "Current status: In Progress",
     trackNotFound: "Complaint not found.",
@@ -135,7 +137,7 @@ const translations = {
     placeholderCreatePassword: "Create password",
     placeholderOfficeLogin: "Office login",
     placeholderAdmin: "Admin username",
-    placeholderTrack: "PMC-2026-001245 or 98XXXXXXXX",
+    placeholderTrack: "PMC-2026-001245, anonymous code, or 98XXXXXXXX",
   },
 };
 
@@ -248,7 +250,7 @@ if (citizenLoginForm && citizenLoginMessage) {
     citizenLoginMessage.textContent = "";
 
     try {
-      const response = await fetch("http://localhost:4000/api/auth/login", {
+      const response = await fetch(`${apiBase}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -268,7 +270,7 @@ if (citizenLoginForm && citizenLoginMessage) {
       sessionStorage.setItem("citizen_auth_token", result.token);
       citizenLoginMessage.classList.add("success");
       citizenLoginMessage.textContent = translations[currentLanguage].citizenLoginSuccess;
-      window.location.href = "./citizen-portal.html";
+      window.location.href = appRoutes.citizen;
     } catch (error) {
       citizenLoginMessage.classList.add("error");
       citizenLoginMessage.textContent = translations[currentLanguage].citizenLoginFailed;
@@ -296,7 +298,7 @@ if (signupForm && signupMessage) {
     signupMessage.textContent = "";
 
     try {
-      const response = await fetch("http://localhost:4000/api/auth/register", {
+      const response = await fetch(`${apiBase}/api/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -318,7 +320,7 @@ if (signupForm && signupMessage) {
         }
         signupMessage.textContent = `${translations[currentLanguage].signupSuccess}${anonymousCodeText}`;
         signupForm.reset();
-        window.location.href = "./citizen-portal.html";
+        window.location.href = appRoutes.citizen;
         return;
       }
 
@@ -356,7 +358,7 @@ trackButton?.addEventListener("click", async () => {
   }
 
   try {
-    const response = await fetch(`http://localhost:4000/api/complaints/track?query=${encodeURIComponent(query)}`);
+    const response = await fetch(`${apiBase}/api/complaints/track?query=${encodeURIComponent(query)}`);
     const result = await response.json();
 
     if (!response.ok) {

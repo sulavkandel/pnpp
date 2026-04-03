@@ -1,8 +1,10 @@
+import { apiBase, appRoutes } from "./runtime-config.js";
+
 const storedAdmin = sessionStorage.getItem("admin_user");
 const adminAuthToken = sessionStorage.getItem("admin_auth_token");
 
 if (!storedAdmin || !adminAuthToken) {
-  window.location.replace("./admin-login.html");
+  window.location.replace(appRoutes.adminLogin);
 }
 
 let currentLanguage = "ne";
@@ -151,7 +153,7 @@ document.getElementById("create-office-admin-button").addEventListener("click", 
   message.textContent = "";
 
   try {
-    const response = await fetch("http://localhost:4000/api/admin/office-accounts", {
+    const response = await fetch(`${apiBase}/api/admin/office-accounts`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

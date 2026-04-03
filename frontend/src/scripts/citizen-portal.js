@@ -1,9 +1,9 @@
-const apiBase = "http://localhost:4000";
+import { apiBase, appRoutes } from "./runtime-config.js";
 const storedUser = sessionStorage.getItem("citizen_user");
 const authToken = sessionStorage.getItem("citizen_auth_token");
 
 if (!storedUser || !authToken) {
-  window.location.replace("./index.html");
+  window.location.replace(appRoutes.home);
 }
 
 const user = storedUser ? JSON.parse(storedUser) : null;
@@ -107,6 +107,8 @@ const translations = {
     resultToken: "गुनासो आईडी",
     resultAssigned: "तोकिएको विभाग",
     resultStatus: "हालको स्थिति",
+    anonTokenTitle: "गोप्य ट्र्याकिङ कोड",
+    anonTokenHint: "यो कोड सुरक्षित राख्नुहोस् — लगइन बिना गुनासो ट्र्याक गर्न प्रयोग गर्नुहोस्।",
     resultPendingPoints: "अंक अहिले थपिँदैन। अधिकारीले वैधता पुष्टि गरेपछि मात्र अंक दिइन्छ।",
     myComplaintsEyebrow: "मेरो गुनासोहरू",
     myComplaintsTitle: "फिल्टर, हेर्नुहोस्, र समयरेखा जाँच गर्नुहोस्",
@@ -220,6 +222,8 @@ const translations = {
     resultToken: "Complaint ID",
     resultAssigned: "Assigned department",
     resultStatus: "Current status",
+    anonTokenTitle: "Anonymous Tracking Code",
+    anonTokenHint: "Keep this safe — use it to track your complaint without logging in.",
     resultPendingPoints: "Points are not awarded yet. They are added only after an officer verifies the complaint as valid.",
     myComplaintsEyebrow: "My complaints",
     myComplaintsTitle: "Filter, inspect, and review your complaint timeline",
@@ -675,6 +679,11 @@ function renderComplaintDetail() {
         <h3>${t().timeline}</h3>
         ${history}
       </div>
+      ${complaint.proofImage && complaint.proofImage.dataUrl ? `
+      <div class="detail-card">
+        <h3>${currentLanguage === "ne" ? "प्रमाण फोटो" : "Proof Image"}</h3>
+        <img src="${complaint.proofImage.dataUrl}" alt="${complaint.proofImage.name || 'Proof'}" style="max-width:100%;border-radius:8px;margin-top:8px" />
+      </div>` : ""}
     </div>
     ${complaint.status === "solved" ? `
       <div class="detail-card top-gap">
@@ -724,15 +733,23 @@ function renderComplaintDetail() {
   }
 }
 
-function renderResultCard(complaint) {
+function renderResultCard(complaint, anonymousTrackingToken) {
   const card = document.getElementById("complaint-result-card");
   card.classList.add("visible");
+  const anonSection = anonymousTrackingToken ? `
+    <div style="background:#fff8e1;border:1px solid #c9a227;border-radius:8px;padding:12px;margin-top:12px">
+      <strong style="color:#c9a227">🔒 ${t().anonTokenTitle}</strong>
+      <p style="font-family:monospace;font-size:1.1rem;letter-spacing:2px;margin:6px 0">${anonymousTrackingToken}</p>
+      <small>${t().anonTokenHint}</small>
+    </div>
+  ` : "";
   card.innerHTML = `
     <h3>${t().resultTitle}</h3>
     <p><strong>${t().resultToken}:</strong> ${complaint.tokenNumber}</p>
     <p><strong>${t().resultAssigned}:</strong> ${complaint.assignedOfficeLabel || "-"}</p>
     <p><strong>${t().resultStatus}:</strong> ${statusLabel(complaint.status)}</p>
     <p>${t().resultPendingPoints}</p>
+    ${anonSection}
   `;
 }
 
@@ -872,7 +889,7 @@ document.getElementById("submit-complaint-button")?.addEventListener("click", as
     }
 
     showMessage("success", t().submitSuccess);
-    renderResultCard(result.complaint);
+    renderResultCard(result.complaint, result.anonymousTrackingToken || null);
     form.reset();
     attachmentPayloads = [];
     document.getElementById("attachment-preview-list").innerHTML = "";
@@ -902,7 +919,7 @@ document.getElementById("logout-button")?.addEventListener("click", async () => 
 
   sessionStorage.removeItem("citizen_user");
   sessionStorage.removeItem("citizen_auth_token");
-  window.location.replace("./index.html");
+  window.location.replace(appRoutes.home);
 });
 
 refreshCitizenData()

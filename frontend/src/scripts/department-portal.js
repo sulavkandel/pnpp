@@ -1,15 +1,16 @@
-const apiBase = "http://localhost:4000";
+import { apiBase, appRoutes } from "./runtime-config.js";
 const storedDepartment = sessionStorage.getItem("department_user");
 const departmentAuthToken = sessionStorage.getItem("department_auth_token");
 
 if (!storedDepartment || !departmentAuthToken) {
-  window.location.replace("./department-login.html");
+  window.location.replace(appRoutes.departmentLogin);
 }
 
 const officer = JSON.parse(storedDepartment);
 let currentLanguage = "ne";
 let activeTab = "new";
 let dashboard = null;
+let handoverComplaints = [];
 let selectedComplaintToken = "";
 
 const departmentCatalog = [
@@ -108,6 +109,22 @@ const translations = {
     escalateNeedsComment: "एस्केलेट गर्दा टिप्पणी आवश्यक छ।",
     resolveNeedsComment: "समाधान गर्दा टिप्पणी आवश्यक छ।",
     downloadHint: "Print dialog opened. Save as PDF if needed.",
+    handoverEyebrow: "ह्यान्डओभर समीक्षा",
+    handoverTitle: "अघिल्ला अधिकृतले समाधान गरेका गुनासो पुष्टि गर्नुहोस्",
+    handoverEmpty: "ह्यान्डओभर समीक्षाको लागि गुनासो छैन।",
+    handoverVerify: "पुष्टि गर्नुहोस्",
+    handoverFlag: "अपूर्ण चिन्ह लगाउनुहोस्",
+    proofImageLabel: "प्रमाण फोटो",
+    handoverFlagReason: "अपूर्णताको कारण",
+    handoverFlagSubmit: "झण्डा पठाउनुहोस्",
+    handoverFlagSuccess: "झण्डा प्रशासनको समीक्षाका लागि पठाइयो।",
+    handoverFlagNeedsReason: "कारण आवश्यक छ।",
+    handoverFlagPending: "प्रशासन समीक्षाधीन",
+    handoverFlagVerified: "पुष्टि भयो",
+    handoverFlagRejected: "अस्वीकार गरियो",
+    handoverCancel: "रद्द गर्नुहोस्",
+    handoverFlaggedBy: "झण्डा लगाउनेः",
+    handoverFlagReason2: "कारणः",
   },
   en: {
     topTitle: "JanaSewa · Officer Portal",
@@ -191,6 +208,22 @@ const translations = {
     escalateNeedsComment: "A comment is required when escalating.",
     resolveNeedsComment: "A resolution comment is required.",
     downloadHint: "Print dialog opened. Save as PDF if needed.",
+    handoverEyebrow: "Handover Review",
+    handoverTitle: "Verify resolved complaints from outgoing officers",
+    handoverEmpty: "No complaints pending handover review.",
+    handoverVerify: "Verify",
+    handoverFlag: "Flag as Incomplete",
+    proofImageLabel: "Proof Image",
+    handoverFlagReason: "Reason for flagging",
+    handoverFlagSubmit: "Submit Flag",
+    handoverFlagSuccess: "Flag submitted for admin review.",
+    handoverFlagNeedsReason: "A reason is required.",
+    handoverFlagPending: "Pending Admin Review",
+    handoverFlagVerified: "Flag Verified",
+    handoverFlagRejected: "Flag Rejected",
+    handoverCancel: "Cancel",
+    handoverFlaggedBy: "Flagged by:",
+    handoverFlagReason2: "Reason:",
   },
 };
 
@@ -220,14 +253,21 @@ function complaintAgeHours(complaint) {
 }
 
 function urgencyBadge(complaint) {
+  if (complaint.status === "solved" || complaint.status === "closed_invalid" || complaint.status === "cannot_solve") {
+    return "";
+  }
   const age = complaintAgeHours(complaint);
-  if (age >= 12) {
-    return `<span class="department-badge department-badge-red">${t().urgencyHigh}</span>`;
+  const hoursLeft = Math.max(0, 24 - age);
+  if (age >= 24) {
+    return `<span class="department-badge department-badge-red" style="animation:pulse 1s infinite">🔴 OVERDUE</span>`;
   }
-  if (age >= 6) {
-    return `<span class="department-badge department-badge-amber">${age}h</span>`;
+  if (hoursLeft <= 6) {
+    return `<span class="department-badge department-badge-red">⚠️ ${hoursLeft}h left</span>`;
   }
-  return `<span class="department-badge department-badge-blue">${age}h</span>`;
+  if (hoursLeft <= 12) {
+    return `<span class="department-badge department-badge-amber">⏰ ${hoursLeft}h left</span>`;
+  }
+  return `<span class="department-badge department-badge-blue">${hoursLeft}h left</span>`;
 }
 
 async function fetchDashboard() {
@@ -258,7 +298,6 @@ function getAllReviewableComplaints() {
 }
 
 function complaintCard(complaint) {
-  const deadlineHours = Math.max(0, 24 - complaintAgeHours(complaint));
   return `
     <article class="officer-complaint-card ${complaint.status === "solved" ? "is-solved" : ""}">
       <div class="citizen-complaint-card-head">
@@ -275,7 +314,7 @@ function complaintCard(complaint) {
       <p class="citizen-muted-copy">${complaint.description || "-"}</p>
       <div class="officer-card-meta">
         <span>${formatDate(complaint.createdAt)}</span>
-        <span>${deadlineHours}h left</span>
+        ${urgencyBadge(complaint)}
       </div>
       <button type="button" class="button primary compact-button" data-review-token="${complaint.tokenNumber}">${t().reviewButton}</button>
     </article>
@@ -331,6 +370,10 @@ function renderStatic() {
   document.getElementById("tab-button-accepted").textContent = t().tabAccepted;
   document.getElementById("tab-button-closed").textContent = t().tabClosed;
   document.getElementById("tab-button-performance").textContent = t().tabPerformance;
+  document.getElementById("tab-button-handover").textContent = currentLanguage === "ne" ? "ह्यान्डओभर" : "Handover Review";
+  document.getElementById("tab-link-handover").textContent = currentLanguage === "ne" ? "ह्यान्डओभर समीक्षा" : "Handover Review";
+  document.getElementById("handover-complaints-eyebrow").textContent = t().handoverEyebrow;
+  document.getElementById("handover-complaints-title").textContent = t().handoverTitle;
   document.getElementById("new-complaints-eyebrow").textContent = t().newEyebrow;
   document.getElementById("new-complaints-title").textContent = t().newTitle;
   document.getElementById("forwarded-complaints-eyebrow").textContent = t().forwardedEyebrow;
@@ -502,6 +545,17 @@ async function renderSelectedComplaint() {
       </div>
     </div>
   `;
+
+  // Render proof image if available
+  if (detailed.proofImage && detailed.proofImage.dataUrl) {
+    const proofSection = document.createElement("div");
+    proofSection.className = "detail-card";
+    proofSection.innerHTML = `
+      <h3>${t().proofImageLabel}</h3>
+      <img src="${detailed.proofImage.dataUrl}" alt="${detailed.proofImage.name || 'Proof'}" style="max-width:100%;border-radius:8px;margin-top:8px" />
+    `;
+    node.querySelector(".details-list").appendChild(proofSection);
+  }
 }
 
 function bindReviewButtons() {
@@ -512,6 +566,7 @@ function bindReviewButtons() {
     });
   });
 }
+
 
 function setActiveTab(tab) {
   activeTab = tab;
@@ -547,6 +602,19 @@ async function loadDashboard() {
     || dashboard.tabs.forwardedToMe[0]?.tokenNumber
     || dashboard.tabs.myAcceptedComplaints[0]?.tokenNumber
     || "";
+
+  // Load handover queue
+  try {
+    const handoverResponse = await fetch(`${apiBase}/api/officer/handover-queue`, {
+      headers: { Authorization: `Bearer ${departmentAuthToken}` },
+    });
+    const handoverResult = await handoverResponse.json();
+    if (handoverResponse.ok) {
+      handoverComplaints = handoverResult.handoverComplaints || [];
+    }
+  } catch {
+    handoverComplaints = [];
+  }
 }
 
 async function renderAll() {
@@ -556,6 +624,7 @@ async function renderAll() {
   renderSidebar();
   renderTabs();
   renderPerformance();
+  renderHandoverList();
   bindReviewButtons();
   await renderSelectedComplaint();
   setActiveTab(activeTab);
@@ -700,6 +769,135 @@ function downloadWeeklyReport() {
   document.getElementById("officer-action-message").textContent = t().downloadHint;
 }
 
+function handoverFlagBadge(complaint) {
+  const fs = complaint.handoverFlagStatus;
+  if (!fs) return "";
+  if (fs === "pending") return `<span class="department-badge department-badge-amber">${t().handoverFlagPending}</span>`;
+  if (fs === "verified") return `<span class="department-badge department-badge-red">${t().handoverFlagVerified}</span>`;
+  if (fs === "rejected") return `<span class="department-badge department-badge-green">${t().handoverFlagRejected}</span>`;
+  return "";
+}
+
+function renderHandoverList() {
+  const node = document.getElementById("officer-handover-list");
+  if (!node) return;
+  if (!handoverComplaints.length) {
+    node.innerHTML = `<div class="admin-list-card"><p>${t().handoverEmpty}</p></div>`;
+    return;
+  }
+
+  node.innerHTML = handoverComplaints.map((complaint) => {
+    const alreadyFlagged = complaint.handoverFlagStatus === "pending";
+    const flagInfo = complaint.handoverFlag
+      ? `<div style="margin-top:8px;padding:8px 12px;background:#fff8e1;border-left:3px solid #f59e0b;border-radius:4px;font-size:0.875rem">
+          <strong>${t().handoverFlagReason2}</strong> ${complaint.handoverFlag.reason || "-"}
+          ${complaint.handoverFlag.flaggedByOfficerName ? `<br/><strong>${t().handoverFlaggedBy}</strong> ${complaint.handoverFlag.flaggedByOfficerName}` : ""}
+        </div>`
+      : "";
+
+    return `
+      <article class="officer-complaint-card is-solved">
+        <div class="citizen-complaint-card-head">
+          <div>
+            <p class="department-tid">${complaint.tokenNumber}</p>
+            <strong>${complaint.title || complaint.subcategory || complaint.category}</strong>
+            <p>${complaint.assignedOfficeLabel || "-"} · ${complaint.assignedOfficerName || "-"}</p>
+          </div>
+          <div class="officer-card-badges">
+            ${handoverFlagBadge(complaint)}
+            <span class="department-badge department-badge-green">${statusLabel("solved")}</span>
+          </div>
+        </div>
+        <p class="citizen-muted-copy">${complaint.description || "-"}</p>
+        <div class="officer-card-meta">
+          <span>${formatDate(complaint.updatedAt || complaint.createdAt)}</span>
+          <span>${complaint.citizenName || "Anonymous"}</span>
+        </div>
+        ${flagInfo}
+        <div class="action-strip" style="margin-top:8px">
+          <button type="button" class="button primary compact-button" data-review-token="${complaint.tokenNumber}">${t().handoverVerify}</button>
+          ${!alreadyFlagged ? `<button type="button" class="button secondary compact-button" data-flag-token="${complaint.tokenNumber}">${t().handoverFlag}</button>` : ""}
+        </div>
+        ${!alreadyFlagged ? `
+        <div class="handover-flag-form hidden" id="flag-form-${complaint.tokenNumber}" style="margin-top:12px;padding:12px;background:#f9fafb;border-radius:8px;border:1px solid #e5e7eb">
+          <label style="display:block;margin-bottom:8px">
+            <span style="font-size:0.875rem;font-weight:600;display:block;margin-bottom:4px">${t().handoverFlagReason}</span>
+            <textarea id="flag-reason-${complaint.tokenNumber}" rows="3" style="width:100%;box-sizing:border-box" placeholder="${currentLanguage === "ne" ? "कारण लेख्नुहोस्..." : "Describe the issue with this complaint..."}"></textarea>
+          </label>
+          <div class="action-strip">
+            <button type="button" class="button primary compact-button" data-submit-flag="${complaint.tokenNumber}">${t().handoverFlagSubmit}</button>
+            <button type="button" class="button secondary compact-button" data-cancel-flag="${complaint.tokenNumber}">${t().handoverCancel}</button>
+          </div>
+          <div class="form-message" id="flag-message-${complaint.tokenNumber}"></div>
+        </div>
+        ` : ""}
+      </article>
+    `;
+  }).join("");
+
+  bindHandoverEvents();
+  bindReviewButtons();
+}
+
+function bindHandoverEvents() {
+  document.querySelectorAll("[data-flag-token]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const form = document.getElementById(`flag-form-${btn.dataset.flagToken}`);
+      if (form) form.classList.toggle("hidden");
+    });
+  });
+
+  document.querySelectorAll("[data-cancel-flag]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const form = document.getElementById(`flag-form-${btn.dataset.cancelFlag}`);
+      if (form) form.classList.add("hidden");
+    });
+  });
+
+  document.querySelectorAll("[data-submit-flag]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const tokenNumber = btn.dataset.submitFlag;
+      const reason = document.getElementById(`flag-reason-${tokenNumber}`)?.value.trim();
+      const messageNode = document.getElementById(`flag-message-${tokenNumber}`);
+
+      if (!reason) {
+        messageNode.className = "form-message error";
+        messageNode.textContent = t().handoverFlagNeedsReason;
+        return;
+      }
+
+      btn.disabled = true;
+      messageNode.className = "form-message";
+      messageNode.textContent = "";
+
+      try {
+        const response = await fetch(`${apiBase}/api/complaints/${tokenNumber}/handover-flag`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${departmentAuthToken}`,
+          },
+          body: JSON.stringify({ reason }),
+        });
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.message || t().actionFailed);
+
+        messageNode.className = "form-message success";
+        messageNode.textContent = t().handoverFlagSuccess;
+
+        setTimeout(async () => {
+          await loadDashboard();
+          await renderAll();
+        }, 1500);
+      } catch (error) {
+        messageNode.className = "form-message error";
+        messageNode.textContent = error.message || t().actionFailed;
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
 document.querySelectorAll("[data-lang]").forEach((button) => {
   button.addEventListener("click", async () => {
     currentLanguage = button.dataset.lang;
@@ -726,7 +924,7 @@ document.getElementById("department-logout-button")?.addEventListener("click", a
 
   sessionStorage.removeItem("department_user");
   sessionStorage.removeItem("department_auth_token");
-  window.location.replace("./department-login.html");
+  window.location.replace(appRoutes.departmentLogin);
 });
 
 loadDashboard()

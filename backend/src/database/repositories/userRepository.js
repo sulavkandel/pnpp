@@ -6,6 +6,9 @@ export function getUserRepository() {
 
   return {
     collection,
+    findByEmail(email) {
+      return collection.findOne({ email });
+    },
     findByMobileNumber(mobileNumber) {
       return collection.findOne({ mobileNumber });
     },

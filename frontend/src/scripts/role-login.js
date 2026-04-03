@@ -1,3 +1,5 @@
+import { apiBase, appRoutes } from "./runtime-config.js";
+
 const pageRole = document.body.dataset.rolePage;
 
 const translations = {
@@ -215,7 +217,7 @@ if (loginForm && loginMessage) {
     loginMessage.className = "form-message";
     loginMessage.textContent = "";
 
-    const endpoint = pageRole === "admin" ? "http://localhost:4000/api/auth/admin-login" : "http://localhost:4000/api/auth/department-login";
+    const endpoint = pageRole === "admin" ? `${apiBase}/api/auth/admin-login` : `${apiBase}/api/auth/department-login`;
 
     try {
       const response = await fetch(endpoint, {
@@ -237,7 +239,7 @@ if (loginForm && loginMessage) {
         sessionStorage.setItem("admin_user", JSON.stringify(result.user));
         sessionStorage.setItem("admin_auth_token", result.token);
         loginMessage.textContent = translations[pageRole][currentLanguage].success;
-        window.location.href = "./admin-panel.html";
+        window.location.href = appRoutes.adminPanel;
         return;
       }
 
@@ -249,7 +251,7 @@ if (loginForm && loginMessage) {
       sessionStorage.setItem("department_user", JSON.stringify(result.user));
       sessionStorage.setItem("department_auth_token", result.token);
       loginMessage.textContent = successText;
-      window.location.href = "./department-portal.html";
+      window.location.href = appRoutes.departmentPortal;
     } catch (error) {
       loginMessage.classList.add("error");
       loginMessage.textContent = translations[pageRole][currentLanguage].failed;

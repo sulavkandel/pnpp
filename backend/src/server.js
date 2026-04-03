@@ -19,6 +19,8 @@ import {
 } from "./config/db.js";
 
 const routes = [
+  "POST /api/chatbot",
+  "POST /api/complaints/anonymous",
   "POST /api/auth/register",
   "POST /api/auth/login",
   "POST /api/auth/admin-login",
@@ -39,8 +41,10 @@ const routes = [
   "GET /api/admin/office-accounts",
   "POST /api/admin/office-accounts",
   "GET /api/admin/analytics",
+  "GET /api/public/overview",
   "GET /api/citizen/dashboard",
   "GET /api/officer/dashboard",
+  "GET /api/officer/handover-queue",
   "GET /api/admin/complaints",
   "GET /api/complaints/track",
   "GET /api/complaints/mine",
@@ -52,6 +56,8 @@ const routes = [
   "PATCH /api/complaints/:tokenNumber/status",
   "PATCH /api/complaints/:tokenNumber/eta",
   "PATCH /api/complaints/:tokenNumber/forward",
+  "POST /api/complaints/:tokenNumber/handover-flag",
+  "PATCH /api/admin/officers/:id/adjustments/:index",
 ];
 
 const adminCredentials = {
@@ -73,15 +79,17 @@ const directDepartmentMap = {
 };
 
 const routingRules = [
-  { keywords: ["road", "pothole", "bridge", "blacktop"], divisionName: "Infrastructure Development", sectionName: "Road Section" },
-  { keywords: ["water", "pipe", "sewer", "drain", "drainage"], divisionName: "Infrastructure Development", sectionName: "Water & Sewer" },
-  { keywords: ["garbage", "waste", "sanitation", "trash"], divisionName: "Urban Dev & Environment", sectionName: "Sanitation/Waste" },
-  { keywords: ["tree", "park", "greenery", "tourism"], divisionName: "Urban Dev & Environment", sectionName: "Greenery Units" },
-  { keywords: ["school", "teacher", "education"], divisionName: "Education", sectionName: "School Management / Education Programs" },
-  { keywords: ["hospital", "clinic", "health", "medicine"], divisionName: "Health", sectionName: "Health Services / Health Center Coordination" },
-  { keywords: ["tax", "revenue", "procurement", "audit"], divisionName: "Finance & Revenue", sectionName: "Revenue/Tax Units" },
-  { keywords: ["job", "employment", "business", "agri", "livestock"], divisionName: "Economic Development", sectionName: "Employment" },
-  { keywords: ["law", "legal", "dispute"], divisionName: "Legal", sectionName: "Legal Advice / Dispute Management" },
+  { keywords: ["road", "pothole", "bridge", "blacktop", "street", "बाटो", "पोथोल", "पुल", "सडक", "ब्ल्याकटप"], divisionName: "Infrastructure Development", sectionName: "Road Section" },
+  { keywords: ["water", "pipe", "sewer", "drain", "drainage", "पानी", "धारा", "ढल", "पाइप", "नाली"], divisionName: "Infrastructure Development", sectionName: "Water & Sewer" },
+  { keywords: ["garbage", "waste", "sanitation", "trash", "फोहर", "कचरा", "सफाई", "फोहोर", "मैला"], divisionName: "Urban Dev & Environment", sectionName: "Sanitation/Waste" },
+  { keywords: ["tree", "park", "greenery", "tourism", "बोट", "पार्क", "हरियाली", "पर्यटन", "वन"], divisionName: "Urban Dev & Environment", sectionName: "Greenery Units" },
+  { keywords: ["school", "teacher", "education", "विद्यालय", "शिक्षक", "शिक्षा", "पाठशाला", "कलेज"], divisionName: "Education", sectionName: "School Management / Education Programs" },
+  { keywords: ["hospital", "clinic", "health", "medicine", "अस्पताल", "स्वास्थ्य", "औषधि", "क्लिनिक", "चिकित्सा"], divisionName: "Health", sectionName: "Health Services / Health Center Coordination" },
+  { keywords: ["tax", "revenue", "procurement", "audit", "कर", "राजस्व", "खरिद", "लेखापरीक्षण"], divisionName: "Finance & Revenue", sectionName: "Revenue/Tax Units" },
+  { keywords: ["job", "employment", "business", "agri", "livestock", "रोजगार", "व्यापार", "कृषि", "पशुपालन", "उद्योग"], divisionName: "Economic Development", sectionName: "Employment" },
+  { keywords: ["law", "legal", "dispute", "कानून", "विवाद", "न्याय", "मुद्दा", "अदालत", "कानूनी"], divisionName: "Legal", sectionName: "Legal Advice / Dispute Management" },
+  { keywords: ["electricity", "light", "streetlight", "bijuli", "बिजुली", "बत्ती", "स्ट्रिटलाइट"], divisionName: "Administration", sectionName: "Inspection (Security)" },
+  { keywords: ["paperwork", "certificate", "registration", "citizenship", "प्रमाणपत्र", "दर्ता", "नागरिकता", "कागजात"], divisionName: "Administration", sectionName: "Admin Section" },
 ];
 
 function sendJson(res, statusCode, payload) {
@@ -131,6 +139,119 @@ function normalizeText(value) {
   return String(value || "").toLowerCase().trim();
 }
 
+function normalizeEmail(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function parseCoordinatesFromText(value) {
+  const match = String(value || "").match(/(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/);
+  if (!match) return null;
+
+  const latitude = Number(match[1]);
+  const longitude = Number(match[2]);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  if (Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null;
+
+  return {
+    latitude: Math.round(latitude * 1e6) / 1e6,
+    longitude: Math.round(longitude * 1e6) / 1e6,
+  };
+}
+
+function normalizeCoordinates(input, fallbackText = "") {
+  if (input && typeof input === "object") {
+    const latitude = Number(input.latitude ?? input.lat);
+    const longitude = Number(input.longitude ?? input.lng ?? input.lon);
+    if (Number.isFinite(latitude) && Number.isFinite(longitude) && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180) {
+      return {
+        latitude: Math.round(latitude * 1e6) / 1e6,
+        longitude: Math.round(longitude * 1e6) / 1e6,
+      };
+    }
+  }
+
+  return parseCoordinatesFromText(fallbackText);
+}
+
+function departmentSectionsForRouting(department, departments = []) {
+  const directSections = Array.isArray(department?.subDepartments)
+    ? department.subDepartments.map((item) => String(item).trim()).filter(Boolean)
+    : [];
+  if (directSections.length) return directSections;
+
+  const childSections = departments
+    .filter((item) => String(item.parentCode || "").trim().toUpperCase() === String(department?.code || "").trim().toUpperCase())
+    .map((item) => String(item.name || "").trim())
+    .filter(Boolean);
+  if (childSections.length) return childSections;
+
+  return String(department?.name || "").trim() ? [String(department.name).trim()] : [];
+}
+
+function resolveDepartmentRoutingTarget(departments, input = {}) {
+  const departmentCode = String(input.departmentCode || "").trim().toUpperCase();
+  const divisionName = String(input.divisionName || "").trim();
+  const sectionName = String(input.sectionName || "").trim();
+
+  const resolveLeafDepartment = (leafDepartment) => {
+    const parentDepartment = departments.find(
+      (department) =>
+        String(department.code || "").trim().toUpperCase()
+        === String(leafDepartment.parentCode || "").trim().toUpperCase(),
+    );
+    return {
+      departmentCode: parentDepartment?.code || leafDepartment.parentCode || leafDepartment.code || departmentCode,
+      divisionName: parentDepartment?.name || divisionName || leafDepartment.name || "",
+      sectionName: sectionName || leafDepartment.name || "",
+    };
+  };
+
+  const byCode = departmentCode
+    ? departments.find((department) => String(department.code || "").trim().toUpperCase() === departmentCode)
+    : null;
+  if (byCode) {
+    if (String(byCode.parentCode || "").trim()) {
+      return resolveLeafDepartment(byCode);
+    }
+
+    const routedSections = departmentSectionsForRouting(byCode, departments);
+    return {
+      departmentCode: byCode.code || departmentCode,
+      divisionName: byCode.name || divisionName,
+      sectionName: sectionName || routedSections[0] || byCode.name || "",
+    };
+  }
+
+  const byDivisionName = divisionName
+    ? departments.find((department) => normalizeText(department.name) === normalizeText(divisionName))
+    : null;
+  if (byDivisionName) {
+    if (String(byDivisionName.parentCode || "").trim()) {
+      return resolveLeafDepartment(byDivisionName);
+    }
+
+    const routedSections = departmentSectionsForRouting(byDivisionName, departments);
+    return {
+      departmentCode: byDivisionName.code || departmentCode,
+      divisionName: byDivisionName.name || divisionName,
+      sectionName: sectionName || routedSections[0] || byDivisionName.name || "",
+    };
+  }
+
+  const bySectionName = sectionName
+    ? departments.find((department) => normalizeText(department.name) === normalizeText(sectionName))
+    : null;
+  if (bySectionName && String(bySectionName.parentCode || "").trim()) {
+    return resolveLeafDepartment(bySectionName);
+  }
+
+  return {
+    departmentCode,
+    divisionName,
+    sectionName,
+  };
+}
+
 function sanitizeCitizen(user) {
   return {
     id: String(user._id),
@@ -159,6 +280,7 @@ function sanitizeOfficeAccount(account) {
     wardNumber: account.wardNumber || "",
     status: account.status || "active",
     assignmentWeeks: getEffectiveAssignmentWeeks(account),
+    isOnDutyThisWeek: isOfficerOnDutyThisWeek(account),
     activationStartAt: account.activationStartAt || null,
     activationExpiresAt: account.activationExpiresAt || endOfCurrentWeek().toISOString(),
     currentWeekPoints: Number(account.currentWeekPoints || 0),
@@ -172,6 +294,7 @@ function sanitizeDepartment(department) {
     code: department.code,
     name: department.name,
     type: department.type || "Mahashakha",
+    parentCode: department.parentCode || "",
     wards: department.wards || [],
     subDepartments: department.subDepartments || [],
     description: department.description || "",
@@ -295,6 +418,11 @@ function getEffectiveAssignmentWeeks(account) {
   return [];
 }
 
+function isOfficerOnDutyThisWeek(account, weekKey = getCurrentWeekKey()) {
+  if (!account || account.status === "inactive") return false;
+  return getEffectiveAssignmentWeeks(account).includes(weekKey);
+}
+
 function startOfCurrentWeek() {
   const date = new Date();
   const day = date.getDay();
@@ -332,6 +460,31 @@ function inferWardNumber(inputWardNumber, locationText) {
   return match ? match[1] : "";
 }
 
+// In-memory rate limiters for chatbot and anonymous complaints
+const chatbotRateLimiter = new Map();
+const anonymousComplaintRateLimiter = new Map();
+
+function checkRateLimit(map, ip, maxPerHour) {
+  const now = Date.now();
+  const windowMs = 3_600_000;
+  const entry = map.get(ip);
+  if (!entry || now > entry.resetAt) {
+    map.set(ip, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (entry.count >= maxPerHour) return false;
+  entry.count++;
+  return true;
+}
+
+function getClientIp(req) {
+  return String(
+    req.headers["x-forwarded-for"]?.split(",")[0] ||
+    req.socket?.remoteAddress ||
+    "unknown"
+  ).trim();
+}
+
 function sanitizeImagePayload(image) {
   if (!image || typeof image !== "object") return null;
   const name = String(image.name || "").trim();
@@ -365,31 +518,474 @@ function sanitizeAttachmentPayload(attachment) {
   return { name, mimeType, dataUrl };
 }
 
-function determineDepartmentRoute(category, text) {
-  if (directDepartmentMap[category]) {
-    return directDepartmentMap[category];
+const nepaliDigitMap = {
+  "०": "0",
+  "१": "1",
+  "२": "2",
+  "३": "3",
+  "४": "4",
+  "५": "5",
+  "६": "6",
+  "७": "7",
+  "८": "8",
+  "९": "9",
+};
+
+const chatbotDepartmentCatalog = [
+  {
+    category: "road",
+    labelEn: "Road & Infrastructure",
+    labelNe: "सडक तथा पूर्वाधार",
+    keywords: ["road", "street", "bridge", "pothole", "blacktop", "footpath", "बाटो", "सडक", "पुल", "खाल्डो", "पोथोल"],
+  },
+  {
+    category: "water",
+    labelEn: "Water & Sewer",
+    labelNe: "पानी तथा ढल",
+    keywords: ["water", "pipe", "leak", "leakage", "sewer", "drain", "drainage", "tap", "pani", "पानी", "ढल", "नाली", "धारा", "पाइप"],
+  },
+  {
+    category: "garbage",
+    labelEn: "Sanitation & Environment",
+    labelNe: "सरसफाई तथा वातावरण",
+    keywords: ["garbage", "waste", "sanitation", "trash", "cleaning", "collection", "फोहर", "फोहोर", "कचरा", "सरसफाई", "सफाई"],
+  },
+  {
+    category: "light",
+    labelEn: "Administration & Inspection",
+    labelNe: "प्रशासन तथा निरीक्षण",
+    keywords: ["light", "electricity", "streetlight", "power", "wire", "inspection", "bijuli", "बत्ती", "बिजुली", "विद्युत"],
+  },
+  {
+    category: "health",
+    labelEn: "Health Services",
+    labelNe: "स्वास्थ्य सेवा",
+    keywords: ["health", "hospital", "clinic", "medicine", "doctor", "अस्पताल", "स्वास्थ्य", "क्लिनिक", "चिकित्सा", "औषधि"],
+  },
+  {
+    category: "education",
+    labelEn: "Education Services",
+    labelNe: "शिक्षा सेवा",
+    keywords: ["school", "teacher", "education", "college", "classroom", "विद्यालय", "शिक्षा", "शिक्षक", "कलेज", "पढाइ"],
+  },
+  {
+    category: "legal",
+    labelEn: "Legal Affairs",
+    labelNe: "कानुनी सेवा",
+    keywords: ["legal", "law", "dispute", "court", "कानून", "कानुनी", "विवाद", "न्याय", "मुद्दा"],
+  },
+  {
+    category: "other",
+    labelEn: "Administration / General Support",
+    labelNe: "प्रशासन / सामान्य सहायता",
+    keywords: ["certificate", "paperwork", "registration", "citizenship", "tax", "revenue", "employment", "business", "प्रमाणपत्र", "कागजात", "दर्ता", "नागरिकता", "राजस्व", "रोजगार"],
+  },
+];
+
+function toAsciiDigits(value) {
+  return String(value || "").replace(/[०-९]/g, (digit) => nepaliDigitMap[digit] || digit);
+}
+
+function collapseSpaces(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function detectChatbotLanguage(text, fallback = "en") {
+  return /[\u0900-\u097F]/.test(String(text || "")) ? "ne" : (fallback === "ne" ? "ne" : "en");
+}
+
+function getChatbotDepartmentByCategory(category) {
+  return chatbotDepartmentCatalog.find((item) => item.category === category) || null;
+}
+
+function labelChatbotDepartment(option, language = "en") {
+  if (!option) return "";
+  return language === "ne" ? option.labelNe : option.labelEn;
+}
+
+function inferDepartmentFromText(text) {
+  const normalized = normalizeText(toAsciiDigits(text));
+  if (!normalized) return null;
+  return chatbotDepartmentCatalog.find((option) => option.keywords.some((keyword) => normalized.includes(normalizeText(toAsciiDigits(keyword))))) || null;
+}
+
+function extractWardNumberFromText(text) {
+  const normalized = toAsciiDigits(String(text || ""));
+  const match = normalized.match(/(?:ward|वडा)\s*(?:number|no\.?|नं\.?)?\s*(\d{1,2})/i);
+  if (!match) return null;
+
+  const ward = Number(match[1]);
+  if (!Number.isInteger(ward) || ward < 1 || ward > 33) return null;
+  return ward;
+}
+
+function extractPhoneFromText(text) {
+  const normalized = toAsciiDigits(String(text || "")).replace(/[^\d]/g, " ");
+  const match = normalized.match(/\b(9\d{9})\b/);
+  return match ? match[1] : null;
+}
+
+function isChatbotConfirmationText(text) {
+  const normalized = normalizeText(toAsciiDigits(text)).replace(/[.!?]/g, "");
+  const exactMatches = [
+    "confirm",
+    "yes",
+    "correct",
+    "submit",
+    "proceed",
+    "go ahead",
+    "looks good",
+    "ok",
+    "okay",
+    "हो",
+    "पुष्टि",
+    "ठिक छ",
+    "सही छ",
+    "सहि छ",
+  ];
+  if (exactMatches.includes(normalized)) return true;
+
+  return [
+    /\b(confirm|submit|proceed|approve)\b/i,
+    /\b(?:yes|ok|okay)\b.*\b(?:submit|proceed|go ahead|continue)\b/i,
+    /\b(?:go ahead|looks good|all good|that's right|thats right)\b/i,
+    /(पुष्टि|पेश|दर्ता|ठिक छ|सही छ|सहि छ)/,
+  ].some((pattern) => pattern.test(normalized));
+}
+
+function isChatbotCancelText(text) {
+  const normalized = normalizeText(toAsciiDigits(text)).replace(/[.!?]/g, "");
+  const exactMatches = [
+    "cancel",
+    "stop",
+    "abort",
+    "nevermind",
+    "never mind",
+    "रद्द",
+    "बन्द",
+    "रोक",
+    "चाहिँदैन",
+  ];
+  if (exactMatches.includes(normalized)) return true;
+
+  return [
+    /\b(cancel|stop|abort|never ?mind|dont submit|do not submit|forget it)\b/i,
+    /(रद्द|बन्द|रोक|चाहिँदैन)/,
+  ].some((pattern) => pattern.test(normalized));
+}
+
+function isChatbotPhoneSkipText(text) {
+  const normalized = normalizeText(toAsciiDigits(text)).replace(/[.!?]/g, "");
+  const exactMatches = [
+    "skip",
+    "no phone",
+    "none",
+    "prefer not",
+    "without phone",
+    "स्किप",
+    "फोन छैन",
+    "छोड्नुहोस्",
+    "छोड्नुस",
+  ];
+  if (exactMatches.includes(normalized)) return true;
+
+  return [
+    /\b(skip|no phone|without phone|prefer not|dont want to share|do not want to share|no contact)\b/i,
+    /(स्किप|फोन छैन|छोड्नुहोस्|छोड्नुस)/,
+  ].some((pattern) => pattern.test(normalized));
+}
+
+function sanitizeChatbotText(text, maxLength) {
+  return collapseSpaces(String(text || "").slice(0, maxLength));
+}
+
+function sanitizeChatbotLocation(text) {
+  return sanitizeChatbotText(text, 180);
+}
+
+function sanitizeChatbotDescription(text) {
+  return sanitizeChatbotText(text, 800);
+}
+
+function extractLocationPhrase(text) {
+  const normalized = sanitizeChatbotLocation(text);
+  const narrativeMatch = normalized.match(/(?:at|in|on|near|around)\s+([^.!?]+)/i);
+  if (narrativeMatch?.[1]) {
+    return sanitizeChatbotLocation(narrativeMatch[1].replace(/\s+\.$/, ""));
+  }
+  const wardMatch = normalized.match(/(?:ward|वडा)\s*(?:number|no\.?|नं\.?)?\s*\d{1,2}[^.!?]*/i);
+  if (wardMatch?.[0]) {
+    return sanitizeChatbotLocation(wardMatch[0]);
+  }
+  return "";
+}
+
+function parseChatbotDraft(input, fallbackLanguage = "en") {
+  const rawWardNumber = sanitizeChatbotText(input?.ward_number, 4);
+  const wardNumber = rawWardNumber ? Number(toAsciiDigits(rawWardNumber)) : null;
+  return {
+    department: sanitizeChatbotText(input?.department, 80),
+    location: sanitizeChatbotLocation(input?.location),
+    description: sanitizeChatbotDescription(input?.description),
+    ward_number: Number.isInteger(wardNumber) ? wardNumber : null,
+    phone: input?.phone ? sanitizeChatbotText(input.phone, 30) : null,
+    language: input?.language === "ne" ? "ne" : (fallbackLanguage === "ne" ? "ne" : "en"),
+    categoryHint: sanitizeChatbotText(input?.categoryHint, 40),
+    phoneSkipped: Boolean(input?.phoneSkipped),
+  };
+}
+
+function identifyChatbotMissingRequired(draft) {
+  const missing = [];
+  if (!draft.department) missing.push("department");
+  if (!draft.location) missing.push("location");
+  if (!draft.description) missing.push("description");
+  return missing;
+}
+
+function buildChatbotJsonBlock(draft) {
+  return JSON.stringify({
+    department: draft.department || "",
+    location: draft.location || "",
+    description: draft.description || "",
+    ward_number: draft.ward_number ?? null,
+    phone: draft.phone || null,
+    language: draft.language || "en",
+  }, null, 2);
+}
+
+function mergeChatbotDraft(baseDraft, patch, fallbackLanguage = "en") {
+  const nextLanguage = patch?.language === "ne" ? "ne" : (baseDraft.language === "ne" ? "ne" : (fallbackLanguage === "ne" ? "ne" : "en"));
+  const merged = {
+    ...baseDraft,
+    language: nextLanguage,
+  };
+
+  if (patch?.department) merged.department = sanitizeChatbotText(patch.department, 80);
+  if (patch?.location) merged.location = sanitizeChatbotLocation(patch.location);
+  if (patch?.description) merged.description = sanitizeChatbotDescription(patch.description);
+  if (patch?.phone) merged.phone = sanitizeChatbotText(patch.phone, 30);
+  if (typeof patch?.phoneSkipped === "boolean") merged.phoneSkipped = patch.phoneSkipped;
+
+  const rawWardNumber = sanitizeChatbotText(patch?.ward_number, 4);
+  const wardNumber = rawWardNumber ? Number(toAsciiDigits(rawWardNumber)) : null;
+  if (Number.isInteger(wardNumber) && wardNumber >= 1 && wardNumber <= 33) {
+    merged.ward_number = wardNumber;
   }
 
-  const normalized = normalizeText(text);
-  for (const rule of routingRules) {
-    if (rule.keywords.some((keyword) => normalized.includes(keyword))) {
-      return {
-        divisionName: rule.divisionName,
-        sectionName: rule.sectionName,
-      };
+  if (patch?.categoryHint) {
+    merged.categoryHint = sanitizeChatbotText(patch.categoryHint, 40);
+  }
+
+  const departmentOption = getChatbotDepartmentByCategory(merged.categoryHint) || inferDepartmentFromText(merged.department);
+  if (departmentOption) {
+    merged.categoryHint = departmentOption.category;
+    merged.department = labelChatbotDepartment(departmentOption, nextLanguage);
+  }
+
+  if (!merged.location && Number.isInteger(merged.ward_number)) {
+    merged.location = nextLanguage === "ne" ? `वडा ${merged.ward_number}` : `Ward ${merged.ward_number}`;
+  }
+
+  return merged;
+}
+
+function buildLocalChatbotPatch(message, draft, fallbackLanguage = "en") {
+  const patch = {
+    language: detectChatbotLanguage(message, draft.language || fallbackLanguage),
+  };
+  const normalizedMessage = sanitizeChatbotText(message, 1000);
+  const wordCount = normalizedMessage.split(/\s+/).filter(Boolean).length;
+  const missingBefore = identifyChatbotMissingRequired(draft);
+  const primaryMissing = missingBefore[0] || "";
+  const departmentOption = inferDepartmentFromText(normalizedMessage);
+  const wardNumber = extractWardNumberFromText(normalizedMessage);
+  const phone = extractPhoneFromText(normalizedMessage);
+  const cleanedText = collapseSpaces(
+    normalizedMessage
+      .replace(/\b(?:my\s+phone(?:\s+number)?\s+is|phone(?:\s+number)?\s+is|contact(?:\s+number)?\s+is)\s*9\d{9}\b/gi, " ")
+      .replace(/(?:मेरो\s+फोन(?:\s+नम्बर)?|फोन(?:\s+नम्बर)?)[\s:]*9\d{9}/g, " ")
+      .replace(/\b9\d{9}\b/g, " "),
+  )
+    .replace(/\s+\./g, ".")
+    .replace(/\.\s*\./g, ".")
+    .replace(/[.\s]+$/, "")
+    .trim();
+  const locationPhrase = extractLocationPhrase(cleanedText);
+
+  if (!draft.department && departmentOption) {
+    patch.categoryHint = departmentOption.category;
+    patch.department = labelChatbotDepartment(departmentOption, patch.language);
+  }
+
+  if (wardNumber !== null) {
+    patch.ward_number = wardNumber;
+  }
+
+  if (phone) {
+    patch.phone = phone;
+  }
+
+  if (!draft.location) {
+    if (primaryMissing === "location" && (locationPhrase || cleanedText)) {
+      patch.location = locationPhrase || cleanedText;
+    } else if (wardNumber !== null && (locationPhrase || cleanedText)) {
+      patch.location = locationPhrase || cleanedText;
     }
   }
 
-  return {
-    divisionName: "Administration",
-    sectionName: "Admin Section",
-  };
+  if (!draft.description) {
+    if (primaryMissing === "description" && wordCount >= 2) {
+      patch.description = cleanedText;
+    } else if (missingBefore.length >= 2 && wordCount >= 6) {
+      patch.description = cleanedText;
+    }
+  }
+
+  return patch;
+}
+
+function shouldUseDeepSeekForChatbot(message, draft, localPatch) {
+  if (!appConfig.deepseekApiKey) return false;
+  const normalizedMessage = sanitizeChatbotText(message, 1000);
+  if (!normalizedMessage) return false;
+  if (isChatbotCancelText(normalizedMessage) || isChatbotConfirmationText(normalizedMessage) || isChatbotPhoneSkipText(normalizedMessage)) {
+    return false;
+  }
+
+  const missingBefore = identifyChatbotMissingRequired(draft);
+  const wordCount = normalizedMessage.split(/\s+/).filter(Boolean).length;
+
+  if (missingBefore.length >= 2 && wordCount >= 7) return true;
+  if (!draft.department && !localPatch.department && wordCount >= 5) return true;
+  if (!draft.location && !localPatch.location && wordCount >= 6) return true;
+  return false;
+}
+
+async function callDeepSeekChatbotExtraction({ message, draft, imageDescription }) {
+  if (!appConfig.deepseekApiKey) return null;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
+
+  try {
+    const response = await fetch("https://api.deepseek.com/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${appConfig.deepseekApiKey}`,
+      },
+      signal: controller.signal,
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        temperature: 0.2,
+        max_tokens: 220,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: "You extract structured municipal complaint fields from a single citizen message. Return JSON only with keys department, location, description, ward_number, phone, language. Never invent facts. If a field is not explicit or strongly implied, use an empty string or null.",
+          },
+          {
+            role: "user",
+            content: JSON.stringify({
+              draft,
+              message,
+              image_description: imageDescription || "",
+            }),
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) return null;
+    const data = await response.json();
+    const content = data?.choices?.[0]?.message?.content;
+    if (!content) return null;
+
+    const parsed = JSON.parse(content);
+    const inferredDepartment = inferDepartmentFromText(parsed.department || parsed.description || message);
+
+    return {
+      department: parsed.department ? sanitizeChatbotText(parsed.department, 80) : "",
+      location: parsed.location ? sanitizeChatbotLocation(parsed.location) : "",
+      description: parsed.description ? sanitizeChatbotDescription(parsed.description) : "",
+      ward_number: parsed.ward_number ?? null,
+      phone: parsed.phone ? sanitizeChatbotText(parsed.phone, 30) : "",
+      language: parsed.language === "ne" ? "ne" : draft.language,
+      categoryHint: inferredDepartment?.category || "",
+    };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function buildChatbotReply(draft, language, { confirmed = false } = {}) {
+  const missing = identifyChatbotMissingRequired(draft);
+  if (missing[0] === "department") {
+    return language === "ne"
+      ? "कृपया समस्या कुन विभागसँग सम्बन्धित छ भन्नुहोस्। उदाहरण: सडक, पानी, बत्ती, सरसफाई, स्वास्थ्य वा शिक्षा।"
+      : "Please tell me which department this issue belongs to. For example: road, water, electricity, sanitation, health, or education.";
+  }
+
+  if (missing[0] === "location") {
+    return language === "ne"
+      ? "कृपया स्थान बताउनुहोस्। वडा नम्बर, टोल, वा नजिकको चिनारी उल्लेख गर्न सक्नुहुन्छ।"
+      : "Please share the location. You can mention the ward number, area, or a nearby landmark.";
+  }
+
+  if (missing[0] === "description") {
+    return language === "ne"
+      ? "अब समस्याको छोटो तर स्पष्ट विवरण दिनुहोस्, ताकि सही रूपमा दर्ता गर्न सकियोस्।"
+      : "Now please describe the problem clearly so I can prepare the complaint accurately.";
+  }
+
+  if (!draft.phone && !draft.phoneSkipped && !confirmed) {
+    return language === "ne"
+      ? "यदि चाहनुहुन्छ भने अपडेटका लागि फोन नम्बर दिनुहोस्। दिन नचाहे 'skip' वा 'स्किप' भन्न सक्नुहुन्छ।"
+      : "If you want updates, you can share a phone number now. If you prefer not to, reply with 'skip'.";
+  }
+
+  const jsonBlock = buildChatbotJsonBlock(draft);
+  if (confirmed) {
+    return language === "ne"
+      ? `धन्यवाद। मैले अन्तिम दर्ताका लागि विवरण तयार गरेको छु:\n\n${jsonBlock}\n\nतलको बटन थिचेर गुनासो दर्ता गर्नुहोस्।`
+      : `Thanks. I have prepared the final complaint draft:\n\n${jsonBlock}\n\nUse the button below to register the complaint.`;
+  }
+
+  return language === "ne"
+    ? `मैले हालसम्म यो विवरण संकलन गरेको छु:\n\n${jsonBlock}\n\nयदि सबै ठीक छ भने 'confirm', 'yes', वा 'पुष्टि' लेख्नुहोस्। केही सच्याउनुपर्छ भने त्यसैगरी लेख्नुहोस्।`
+    : `I have collected the following complaint details so far:\n\n${jsonBlock}\n\nIf everything looks correct, reply with 'confirm' or 'yes'. If something should change, just tell me what to update.`;
+}
+
+function determineDepartmentRoute(category, text) {
+  const primary = directDepartmentMap[category] || null;
+  const normalized = normalizeText(text);
+
+  let matched = [];
+  for (const rule of routingRules) {
+    if (rule.keywords.some((keyword) => normalized.includes(keyword))) {
+      matched.push({ divisionName: rule.divisionName, sectionName: rule.sectionName });
+    }
+  }
+
+  // Pick primary: prefer explicit category map, then first keyword match
+  const primaryRoute = primary || matched[0] || { divisionName: "Administration", sectionName: "Admin Section" };
+  // Secondary: first keyword match that differs from primary
+  const secondaryRoute = matched.find(
+    (m) => m.divisionName !== primaryRoute.divisionName || m.sectionName !== primaryRoute.sectionName
+  ) || null;
+
+  return { primary: primaryRoute, secondary: secondaryRoute };
 }
 
 async function routeAndAssignComplaint(repositories, payload) {
   const wardNumber = inferWardNumber(payload.wardNumber, payload.locationText);
   const category = normalizeCategory(payload.category);
   const routingText = `${payload.subcategory} ${payload.description} ${payload.locationText}`;
+  const currentWeek = getCurrentWeekKey();
 
   let officeType = "department";
   let divisionName = "";
@@ -401,9 +997,11 @@ async function routeAndAssignComplaint(repositories, payload) {
     routeBucket = `ward:${wardNumber}`;
   } else {
     const departmentRoute = determineDepartmentRoute(category, routingText);
-    divisionName = departmentRoute.divisionName;
-    sectionName = departmentRoute.sectionName;
+    divisionName = departmentRoute.primary.divisionName;
+    sectionName = departmentRoute.primary.sectionName;
     routeBucket = `department:${divisionName}:${sectionName}`;
+    payload._secondaryDivisionName = departmentRoute.secondary?.divisionName || "";
+    payload._secondarySectionName = departmentRoute.secondary?.sectionName || "";
   }
 
   const candidates = officeType === "ward"
@@ -411,7 +1009,7 @@ async function routeAndAssignComplaint(repositories, payload) {
     : await repositories.officeAccounts.listByOfficeType("department");
 
   const matchingCandidates = candidates
-    .filter((candidate) => candidate.status !== "inactive")
+    .filter((candidate) => isOfficerOnDutyThisWeek(candidate, currentWeek))
     .filter((candidate) => {
       if (officeType === "ward") {
         return String(candidate.wardNumber) === String(wardNumber);
@@ -448,6 +1046,8 @@ async function routeAndAssignComplaint(repositories, payload) {
     divisionName,
     sectionName,
     routeBucket,
+    secondaryDivisionName: payload._secondaryDivisionName || "",
+    secondarySectionName: payload._secondarySectionName || "",
     assignmentReason: `Automatically routed to ${officeType === "ward" ? `Ward ${wardNumber}` : `${divisionName} / ${sectionName}`}.`,
     assignedOfficer,
   };
@@ -455,12 +1055,13 @@ async function routeAndAssignComplaint(repositories, payload) {
 
 async function assignSpecificOffice(repositories, target) {
   const officeType = target.officeType;
+  const currentWeek = getCurrentWeekKey();
   const candidates = officeType === "ward"
     ? await repositories.officeAccounts.listByOfficeType("ward")
     : await repositories.officeAccounts.listByOfficeType("department");
 
   const matchingCandidates = candidates
-    .filter((candidate) => candidate.status !== "inactive")
+    .filter((candidate) => isOfficerOnDutyThisWeek(candidate, currentWeek))
     .filter((candidate) => {
       if (officeType === "ward") {
         return String(candidate.wardNumber) === String(target.wardNumber);
@@ -507,6 +1108,7 @@ function complaintSummaryForCitizen(complaint) {
     subcategory: complaint.subcategory,
     description: complaint.description,
     locationText: complaint.locationText,
+    locationCoordinates: complaint.locationCoordinates || normalizeCoordinates(null, complaint.locationText),
     wardNumber: complaint.wardNumber || "",
     status: complaint.status,
     priority: complaint.priority,
@@ -528,6 +1130,9 @@ function complaintSummaryForCitizen(complaint) {
       mimeType: attachment.mimeType,
       dataUrl: attachment.dataUrl,
     })),
+    anonymous: Boolean(complaint.anonymous),
+    rewardEligible: !Boolean(complaint.anonymous),
+    anonymousTrackingToken: complaint.anonymousTrackingToken || null,
     citizenRating: complaint.citizenRating || 0,
     closureConfirmedAt: complaint.closureConfirmedAt || null,
     pointsAwarded: Number(complaint.pointsAwarded || 0),
@@ -564,6 +1169,7 @@ function buildAuditEntry(tokenNumber, actor, action, message) {
 }
 
 function pointsForComplaint(complaint) {
+  if (complaint.anonymous) return 0;
   if (complaint.priority === "high") return 60;
   if (complaint.priority === "low") return 20;
   return 40;
@@ -592,10 +1198,12 @@ function computeOfficerPerformance(account, complaints) {
     ? `${Math.round(responseTimes.reduce((sum, value) => sum + value, 0) / responseTimes.length)}h`
     : "-";
   const adjustments = account.performanceAdjustments || [];
+  // Only count verified adjustments (or legacy entries without a status field)
+  const verifiedAdjustments = adjustments.filter((entry) => !entry.status || entry.status === "verified");
   const allTimePoints = completed.reduce((sum, item) => sum + officerPointsForComplaint(item), 0)
-    + adjustments.reduce((sum, entry) => sum + Number(entry.points || 0), 0);
+    + verifiedAdjustments.reduce((sum, entry) => sum + Number(entry.points || 0), 0);
   const currentWeekPoints = thisWeekCompleted.reduce((sum, item) => sum + officerPointsForComplaint(item), 0)
-    + adjustments.filter((entry) => new Date(entry.createdAt || 0).getTime() >= weekStart).reduce((sum, entry) => sum + Number(entry.points || 0), 0);
+    + verifiedAdjustments.filter((entry) => new Date(entry.createdAt || 0).getTime() >= weekStart).reduce((sum, entry) => sum + Number(entry.points || 0), 0);
 
   return {
     currentWeekPoints,
@@ -762,6 +1370,13 @@ function canAccessComplaint(actor, complaint) {
   if (actor.role === "admin") return true;
   if (actor.role === "citizen") return complaint.citizenId === actor.principalId;
 
+  if (
+    ["solved", "pending_admin_verification"].includes(complaint.status)
+    && isWithinOfficerOfficeScope(actor, complaint)
+  ) {
+    return true;
+  }
+
   if (complaint.acceptedByOfficerId || complaint.acceptedAt) {
     return complaint.assignedOfficerId === actor.principalId || complaint.acceptedByOfficerId === actor.principalId;
   }
@@ -774,11 +1389,17 @@ async function enrichComplaint(repositories, complaint, viewerRole = "citizen") 
     repositories.comments.listByComplaintToken(complaint.tokenNumber),
     repositories.complaints.listStatusHistory(complaint.tokenNumber),
   ]);
+  const normalizedComments = comments.length ? comments : (complaint.comments || []);
+  const normalizedHistory = (history.length ? history : (complaint.history || [])).map((entry) => ({
+    ...entry,
+    note: entry.note || entry.message || "",
+    timestamp: entry.timestamp || entry.createdAt || null,
+  }));
 
   return {
     ...(viewerRole === "citizen" ? complaintSummaryForCitizen(complaint) : complaintSummaryForOfficer(complaint)),
-    comments: comments.filter((comment) => viewerRole !== "citizen" || comment.visibility === "public"),
-    history,
+    comments: normalizedComments.filter((comment) => viewerRole !== "citizen" || comment.visibility === "public" || !comment.visibility),
+    history: normalizedHistory,
   };
 }
 
@@ -789,6 +1410,133 @@ function aggregateCounts(items, keySelector) {
     counts.set(key, (counts.get(key) || 0) + 1);
   });
   return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+}
+
+const publicOpenStatuses = new Set(["pending", "in_progress", "delayed", "forwarded", "escalated", "pending_admin_verification"]);
+const publicPendingStatuses = new Set(["pending", "delayed", "forwarded", "escalated", "pending_admin_verification"]);
+
+function toTimestamp(value) {
+  const timestamp = new Date(value || 0).getTime();
+  return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+function getComplaintCreatedAtMs(complaint) {
+  return toTimestamp(complaint.createdAt);
+}
+
+function getComplaintUpdatedAtMs(complaint) {
+  return toTimestamp(complaint.updatedAt || complaint.createdAt);
+}
+
+function getComplaintCompletedAtMs(complaint) {
+  return toTimestamp(complaint.closureConfirmedAt || complaint.updatedAt || complaint.createdAt);
+}
+
+function isComplaintOpenForPublic(complaint) {
+  return publicOpenStatuses.has(String(complaint.status || ""));
+}
+
+function isComplaintPendingForPublic(complaint) {
+  return publicPendingStatuses.has(String(complaint.status || ""));
+}
+
+function isComplaintOverdueForPublic(complaint) {
+  const dueAt = toTimestamp(complaint.slaDueAt);
+  return isComplaintOpenForPublic(complaint) && dueAt !== null && dueAt < Date.now();
+}
+
+function getSolvedComplaintDurationDays(complaint) {
+  if (complaint.status !== "solved") return null;
+  const startedAt = getComplaintCreatedAtMs(complaint);
+  const completedAt = getComplaintCompletedAtMs(complaint);
+  if (startedAt === null || completedAt === null || completedAt < startedAt) return null;
+  return (completedAt - startedAt) / (1000 * 60 * 60 * 24);
+}
+
+function buildPublicPerformanceRows(complaints, groupSelector) {
+  const groups = new Map();
+
+  complaints.forEach((complaint) => {
+    const group = groupSelector(complaint);
+    if (!group?.key || !group?.label) return;
+
+    if (!groups.has(group.key)) {
+      groups.set(group.key, {
+        key: group.key,
+        label: group.label,
+        wardNumber: String(group.wardNumber || ""),
+        divisionName: String(group.divisionName || ""),
+        items: [],
+        focusLocationText: "",
+        focusLocationCoordinates: null,
+        focusUpdatedAt: -1,
+      });
+    }
+
+    const entry = groups.get(group.key);
+    entry.items.push(complaint);
+
+    const candidateCoordinates = normalizeCoordinates(complaint.locationCoordinates, complaint.locationText);
+    const candidateText = String(complaint.locationText || "").trim();
+    const candidateUpdatedAt = getComplaintUpdatedAtMs(complaint) ?? -1;
+    const hasLocation = Boolean(candidateCoordinates || candidateText);
+
+    if (hasLocation && candidateUpdatedAt >= entry.focusUpdatedAt) {
+      entry.focusLocationText = candidateText;
+      entry.focusLocationCoordinates = candidateCoordinates;
+      entry.focusUpdatedAt = candidateUpdatedAt;
+    }
+  });
+
+  return [...groups.values()]
+    .map((entry) => {
+      const solvedComplaints = entry.items.filter((item) => item.status === "solved");
+      const resolutionDurations = solvedComplaints
+        .map(getSolvedComplaintDurationDays)
+        .filter((value) => value !== null);
+      const averageResolutionDays = resolutionDurations.length
+        ? Math.round((resolutionDurations.reduce((sum, value) => sum + value, 0) / resolutionDurations.length) * 10) / 10
+        : 0;
+
+      return {
+        key: entry.key,
+        label: entry.label,
+        wardNumber: entry.wardNumber,
+        divisionName: entry.divisionName,
+        total: entry.items.length,
+        resolved: solvedComplaints.length,
+        inProgress: entry.items.filter((item) => item.status === "in_progress").length,
+        overdue: entry.items.filter(isComplaintOverdueForPublic).length,
+        escalated: entry.items.filter((item) => item.status === "escalated" || item.status === "delayed").length,
+        resolutionRate: entry.items.length ? Math.round((solvedComplaints.length / entry.items.length) * 100) : 0,
+        averageResolutionDays,
+        locationText: entry.focusLocationText,
+        locationCoordinates: entry.focusLocationCoordinates,
+      };
+    })
+    .filter((item) => item.total > 0)
+    .sort((left, right) =>
+      right.resolutionRate - left.resolutionRate
+      || left.overdue - right.overdue
+      || left.averageResolutionDays - right.averageResolutionDays
+      || right.total - left.total);
+}
+
+function buildPublicComplaintFeed(complaints) {
+  return [...complaints]
+    .sort((left, right) => (getComplaintCreatedAtMs(right) ?? 0) - (getComplaintCreatedAtMs(left) ?? 0))
+    .slice(0, 8)
+    .map((complaint) => ({
+      tokenNumber: complaint.tokenNumber,
+      category: complaint.category || "other",
+      categoryLabel: complaint.subcategory || complaint.category || "Other",
+      wardNumber: String(complaint.wardNumber || ""),
+      status: complaint.status,
+      createdAt: complaint.createdAt,
+      updatedAt: complaint.updatedAt || complaint.createdAt,
+      assignedOfficeLabel: complaint.assignedOfficeLabel || complaint.assignedDepartment || complaint.divisionName || "",
+      overdue: isComplaintOverdueForPublic(complaint),
+    }));
 }
 
 function buildAnalytics(complaints) {
@@ -833,6 +1581,110 @@ function buildAnalytics(complaints) {
   };
 }
 
+function buildPublicOverview(complaints, departments, officers) {
+  const solvedComplaints = complaints.filter((item) => item.status === "solved");
+  const pendingComplaints = complaints.filter(isComplaintPendingForPublic);
+  const overdueComplaints = complaints.filter(isComplaintOverdueForPublic);
+  const inProgressComplaints = complaints.filter((item) => item.status === "in_progress");
+  const resolutionRate = complaints.length ? Math.round((solvedComplaints.length / complaints.length) * 100) : 0;
+  const firstResponseOnTimeCount = complaints.filter((item) => {
+    if (!item.firstResponseAt || !item.slaDueAt) return false;
+    return new Date(item.firstResponseAt).getTime() <= new Date(item.slaDueAt).getTime();
+  }).length;
+  const firstResponseRate = complaints.length ? Math.round((firstResponseOnTimeCount / complaints.length) * 100) : 0;
+  const resolutionDurations = solvedComplaints.map(getSolvedComplaintDurationDays).filter((value) => value !== null);
+  const averageResolutionDays = resolutionDurations.length
+    ? Math.round((resolutionDurations.reduce((sum, value) => sum + value, 0) / resolutionDurations.length) * 10) / 10
+    : 0;
+  const weekStart = Date.now() - (1000 * 60 * 60 * 24 * 7);
+  const completedThisWeek = solvedComplaints.filter((item) => {
+    const completedAt = getComplaintCompletedAtMs(item);
+    return completedAt !== null && completedAt >= weekStart;
+  }).length;
+  const activeWards = new Set(complaints.map((item) => String(item.wardNumber || "").trim()).filter(Boolean)).size;
+  const activeDepartments = new Set(complaints.map((item) => String(item.divisionName || "").trim()).filter(Boolean)).size;
+  const activeOfficers = officers.filter((item) => isOfficerOnDutyThisWeek(item)).length;
+  const pendingFirstReview = complaints.filter((item) => !item.firstResponseAt && isComplaintPendingForPublic(item)).length;
+  const resolvedWithTargetWindow = solvedComplaints.filter((item) => toTimestamp(item.estimatedCompletionAt) !== null);
+  const resolvedWithinTarget = resolvedWithTargetWindow.filter((item) => {
+    const completedAt = getComplaintCompletedAtMs(item);
+    const targetAt = toTimestamp(item.estimatedCompletionAt);
+    return completedAt !== null && targetAt !== null && completedAt <= targetAt;
+  }).length;
+  const resolvedWithinTargetRate = resolvedWithTargetWindow.length
+    ? Math.round((resolvedWithinTarget / resolvedWithTargetWindow.length) * 100)
+    : 0;
+  const wardPerformance = buildPublicPerformanceRows(
+    complaints.filter((item) => String(item.wardNumber || "").trim()),
+    (item) => ({
+      key: `ward:${item.wardNumber}`,
+      label: `Ward ${item.wardNumber}`,
+      wardNumber: item.wardNumber,
+    }),
+  );
+  const departmentPerformance = buildPublicPerformanceRows(
+    complaints.filter((item) => String(item.divisionName || "").trim()),
+    (item) => ({
+      key: `department:${item.divisionName}`,
+      label: item.divisionName,
+      divisionName: item.divisionName,
+    }),
+  );
+  const hotspotWards = [...wardPerformance]
+    .sort((left, right) => right.total - left.total || right.overdue - left.overdue || left.resolutionRate - right.resolutionRate)
+    .slice(0, 6);
+  const hotspotFocus = hotspotWards.find((item) => item.locationCoordinates || item.locationText) || hotspotWards[0] || null;
+
+  return {
+    totals: {
+      complaints: complaints.length,
+      resolved: solvedComplaints.length,
+      inProgress: inProgressComplaints.length,
+      pending: pendingComplaints.length,
+      overdue: overdueComplaints.length,
+      pendingOrOverdue: pendingComplaints.length + overdueComplaints.length,
+      resolutionRate,
+      averageResolutionDays,
+      activeWards: activeWards || departments.length || 0,
+      activeDepartments: departments.length || activeDepartments,
+      activeOfficers,
+    },
+    liveQueue: {
+      completedThisWeek,
+      inProgress: inProgressComplaints.length,
+      underReview: pendingComplaints.length,
+      escalated: complaints.filter((item) => item.status === "escalated").length,
+      pendingFirstReview,
+      overdue: overdueComplaints.length,
+      firstResponseRate,
+    },
+    sla: {
+      firstResponseOnTime: firstResponseOnTimeCount,
+      firstResponseRate,
+      resolvedWithinTarget,
+      resolvedWithinTargetRate,
+      trackedResolvedCount: resolvedWithTargetWindow.length,
+      escalatedOrDelayed: complaints.filter((item) => item.status === "escalated" || item.status === "delayed").length,
+      overdueOpen: overdueComplaints.length,
+    },
+    departmentLoad: aggregateCounts(
+      complaints.filter((item) => item.divisionName),
+      (item) => item.divisionName,
+    )
+      .slice(0, 6)
+      .map(([label, count]) => ({ label, count })),
+    performance: {
+      wards: wardPerformance,
+      departments: departmentPerformance,
+    },
+    recentComplaints: buildPublicComplaintFeed(complaints),
+    hotspots: {
+      wards: hotspotWards,
+      focus: hotspotFocus,
+    },
+  };
+}
+
 function buildSolvedChart(complaints, departments) {
   return departments.map((department) => {
     const total = complaints.filter((item) => item.divisionName === department.name).length;
@@ -848,19 +1700,25 @@ function buildSolvedChart(complaints, departments) {
 }
 
 function buildOversightQueue(complaints) {
+  const byNewest = (left, right) =>
+    new Date(right.updatedAt || right.createdAt || 0).getTime() - new Date(left.updatedAt || left.createdAt || 0).getTime();
   const officerReviewCandidates = complaints.filter((item) => item.officerActionReview?.status === "pending");
 
   return {
     escalated: complaints
       .filter((item) => item.status === "escalated" || item.officeType === "central_admin")
+      .sort(byNewest)
       .map(complaintSummaryForOfficer),
     invalidPending: complaints
       .filter((item) => item.status === "pending_admin_verification")
+      .sort(byNewest)
       .map(complaintSummaryForOfficer),
-    officerActionReviews: officerReviewCandidates.map((complaint) => ({
-      ...complaintSummaryForOfficer(complaint),
-      reviewMeta: complaint.officerActionReview,
-    })),
+    officerActionReviews: officerReviewCandidates
+      .sort(byNewest)
+      .map((complaint) => ({
+        ...complaintSummaryForOfficer(complaint),
+        reviewMeta: complaint.officerActionReview,
+      })),
   };
 }
 
@@ -881,11 +1739,11 @@ function buildAdminDashboard(complaints, departments, officers, rotations) {
     overview: {
       totalComplaintsMonth: monthlyComplaints.length,
       solvedRate,
-      pending: complaints.filter((item) => ["pending", "in_progress", "delayed", "pending_admin_verification"].includes(item.status)).length,
+      pending: complaints.filter((item) => ["pending", "in_progress", "delayed", "forwarded", "pending_admin_verification", "escalated"].includes(item.status)).length,
       forwarded: complaints.filter((item) => item.status === "forwarded").length,
-      escalated: complaints.filter((item) => item.status === "escalated").length,
+      escalated: oversight.escalated.length,
       departments: departments.length,
-      officers: officers.length,
+      officers: officers.filter((item) => isOfficerOnDutyThisWeek(item)).length,
       activeRotations: activeRotations.length,
     },
     officerGroups: {
@@ -937,6 +1795,8 @@ async function applyPerformanceAdjustment(repositories, officerId, adjustment) {
     {
       points: Number(adjustment.points || 0),
       message: adjustment.message || "",
+      // pending=true means admin must verify before it counts toward points
+      status: adjustment.pending ? "pending" : "verified",
       createdAt: new Date(),
     },
   ];
@@ -1007,8 +1867,8 @@ function buildCitizenDashboard(user, complaints) {
   };
 }
 
-async function handleComplaintCreate(req, res, repositories, actor) {
-  const body = await readJsonBody(req);
+async function handleComplaintCreate(req, res, repositories, actor, preParsedBody = null) {
+  const body = preParsedBody ?? await readJsonBody(req);
   const title = String(body.title || "").trim();
   const category = String(body.category || "").trim();
   const subcategory = String(body.subcategory || "").trim();
@@ -1018,8 +1878,10 @@ async function handleComplaintCreate(req, res, repositories, actor) {
   const wardNumber = String(body.wardNumber || "").trim();
   const areaName = String(body.areaName || "").trim();
   const nearestLandmark = String(body.nearestLandmark || "").trim();
+  const locationCoordinates = normalizeCoordinates(body.locationCoordinates, locationText);
   const anonymous = Boolean(body.anonymous);
-  const contactOptIn = Boolean(body.contactOptIn);
+  const contactOptIn = body.contactOptIn === true
+    || String(body.contactOptIn || "").trim().toLowerCase() === "yes";
 
   if (!title || !category || !description || !locationText) {
     sendJson(res, 400, {
@@ -1043,13 +1905,14 @@ async function handleComplaintCreate(req, res, repositories, actor) {
   const tokenNumber = generateComplaintToken();
   const complaint = {
     tokenNumber,
-    citizenId: actor.principalId,
-    citizenMobileNumber: actor.mobileNumber,
+    citizenId: anonymous ? "" : actor.principalId,
+    citizenMobileNumber: anonymous ? "" : actor.mobileNumber,
     title,
     category,
     subcategory,
     description,
     locationText,
+    locationCoordinates,
     areaName,
     nearestLandmark,
     wardNumber: routing.wardNumber || wardNumber,
@@ -1058,6 +1921,8 @@ async function handleComplaintCreate(req, res, repositories, actor) {
     officeType: routing.officeType,
     divisionName: routing.divisionName || "",
     sectionName: routing.sectionName || "",
+    secondaryDivisionName: routing.secondaryDivisionName || "",
+    secondarySectionName: routing.secondarySectionName || "",
     routeBucket: routing.routeBucket,
     assignmentReason: routing.assignmentReason,
     assignedOfficerId: routing.assignedOfficer ? String(routing.assignedOfficer._id) : "",
@@ -1075,10 +1940,11 @@ async function handleComplaintCreate(req, res, repositories, actor) {
     proofImage,
     attachments,
     anonymous,
+    anonymousTrackingToken: anonymous ? crypto.randomBytes(12).toString("hex") : "",
     contactOptIn,
     contactName: anonymous ? "" : String(body.contactName || actor.name || "").trim(),
     contactPhone: anonymous ? "" : String(body.contactPhone || actor.mobileNumber || "").trim(),
-    contactEmail: anonymous ? "" : String(body.contactEmail || "").trim(),
+    contactEmail: anonymous ? "" : String(body.contactEmail || actor.email || "").trim(),
     estimatedCompletionAt: null,
     slaDueAt: new Date(now.getTime() + 24 * 60 * 60 * 1000),
     firstResponseAt: null,
@@ -1108,6 +1974,7 @@ async function handleComplaintCreate(req, res, repositories, actor) {
     success: true,
     message: "Complaint submitted successfully.",
     complaint: complaintSummaryForCitizen(complaint),
+    anonymousTrackingToken: complaint.anonymousTrackingToken || null,
   });
 }
 
@@ -1142,12 +2009,21 @@ async function createServer({ repositories, runtime }) {
         const body = await readJsonBody(req);
         const name = String(body.name || "").trim();
         const mobileNumber = String(body.mobileNumber || "").trim();
-        const email = String(body.email || "").trim();
+        const email = normalizeEmail(body.email || "");
         const password = String(body.password || "").trim();
         const registerAnonymously = Boolean(body.registerAnonymously);
 
-        if ((!name && !registerAnonymously) || !mobileNumber || !password) {
-          sendJson(res, 400, { success: false, message: "Mobile number and password are required. Name is required unless registering anonymously." });
+        if ((!name && !registerAnonymously) || !mobileNumber || !email || !password) {
+          sendJson(res, 400, {
+            success: false,
+            message: "Email, mobile number, and password are required. Name is required unless registering anonymously.",
+          });
+          return;
+        }
+
+        const existingUserByEmail = await repositories.users.findByEmail?.(email);
+        if (existingUserByEmail) {
+          sendJson(res, 409, { success: false, message: "A user with this email already exists." });
           return;
         }
 
@@ -1182,6 +2058,7 @@ async function createServer({ repositories, runtime }) {
           role: "citizen",
           name: createdUser.name,
           mobileNumber: createdUser.mobileNumber,
+          email: createdUser.email,
           citizenCode: createdUser.citizenCode,
         });
 
@@ -1198,14 +2075,17 @@ async function createServer({ repositories, runtime }) {
 
       if (method === "POST" && pathname === "/api/auth/login") {
         const body = await readJsonBody(req);
-        const identifier = String(body.identifier || body.mobileNumber || "").trim();
+        const identifier = String(body.identifier || "").trim();
         const password = String(body.password || "").trim();
-        const user = identifier.startsWith("CIT-")
-          ? await repositories.users.findByCitizenCode(identifier)
-          : await repositories.users.findByMobileNumber(identifier);
+        const normalizedIdentifier = identifier.includes("@")
+          ? normalizeEmail(identifier)
+          : identifier.toUpperCase();
+        const user = normalizedIdentifier.includes("@")
+          ? await repositories.users.findByEmail?.(normalizedIdentifier)
+          : await repositories.users.findByCitizenCode(normalizedIdentifier);
 
         if (!user || user.role !== "citizen" || user.passwordHash !== hashPassword(password)) {
-          sendJson(res, 401, { success: false, message: "Invalid mobile number / citizen ID or password." });
+          sendJson(res, 401, { success: false, message: "Invalid email / citizen ID or password." });
           return;
         }
 
@@ -1214,6 +2094,7 @@ async function createServer({ repositories, runtime }) {
           role: "citizen",
           name: user.name,
           mobileNumber: user.mobileNumber,
+          email: user.email || "",
           citizenCode: user.citizenCode || "",
         });
 
@@ -1480,13 +2361,17 @@ async function createServer({ repositories, runtime }) {
           const active = body.active !== false;
           const activationStartAt = new Date();
           const activationExpiresAt = endOfCurrentWeek();
+          const departmentRecords = officeType === "department" ? await repositories.departments.listDepartments() : [];
+          const resolvedDepartment = officeType === "department"
+            ? resolveDepartmentRoutingTarget(departmentRecords, { departmentCode, divisionName, sectionName })
+            : { departmentCode: "", divisionName: "", sectionName: "" };
 
           if (!name || !loginId || !password) {
             sendJson(res, 400, { success: false, message: "Name, login ID, and password are required." });
             return;
           }
 
-          if (officeType === "department" && (!departmentCode || !divisionName || !sectionName)) {
+          if (officeType === "department" && (!resolvedDepartment.departmentCode || !resolvedDepartment.divisionName || !resolvedDepartment.sectionName)) {
             sendJson(res, 400, { success: false, message: "Department and sub-department are required for department officers." });
             return;
           }
@@ -1505,9 +2390,9 @@ async function createServer({ repositories, runtime }) {
           const payload = {
             role: officeType === "ward" ? "ward" : "department",
             officeType,
-            departmentCode,
-            divisionName: officeType === "department" ? divisionName : "",
-            sectionName: officeType === "department" ? sectionName : "",
+            departmentCode: officeType === "department" ? resolvedDepartment.departmentCode : "",
+            divisionName: officeType === "department" ? resolvedDepartment.divisionName : "",
+            sectionName: officeType === "department" ? resolvedDepartment.sectionName : "",
             wardNumber: officeType === "ward" ? wardNumber : "",
             name,
             email,
@@ -1708,13 +2593,19 @@ async function createServer({ repositories, runtime }) {
       if (method === "GET" && pathname === "/api/complaints/track") {
         const query = String(parsedUrl.searchParams.get("query") || "").trim();
         if (!query) {
-          sendJson(res, 400, { success: false, message: "Complaint token number or mobile number is required." });
+          sendJson(res, 400, { success: false, message: "Complaint token number, anonymous code, email, or mobile number is required." });
           return;
         }
 
+        const normalizedQuery = query.includes("@") ? normalizeEmail(query) : query;
         let complaint = await repositories.complaints.findByTokenNumber(query);
         if (!complaint) {
-          const citizen = await repositories.users.findByMobileNumber(query);
+          complaint = await repositories.complaints.findByAnonymousTrackingToken?.(query) || null;
+        }
+        if (!complaint) {
+          const citizen = normalizedQuery.includes("@")
+            ? await repositories.users.findByEmail?.(normalizedQuery)
+            : await repositories.users.findByMobileNumber(query);
           if (citizen) {
             const complaints = await repositories.complaints.findByCitizenId(String(citizen._id));
             complaint = complaints[0] || null;
@@ -1733,6 +2624,20 @@ async function createServer({ repositories, runtime }) {
         return;
       }
 
+      if (method === "GET" && pathname === "/api/public/overview") {
+        const [complaints, departments, officers] = await Promise.all([
+          repositories.complaints.listAll(),
+          repositories.departments.listDepartments(),
+          repositories.officeAccounts.listAll(),
+        ]);
+
+        sendJson(res, 200, {
+          success: true,
+          overview: buildPublicOverview(complaints, departments, officers),
+        });
+        return;
+      }
+
       if (method === "GET" && pathname === "/api/complaints/mine") {
         const actor = await requireAuth(req, res, repositories, ["citizen"]);
         if (!actor) return;
@@ -1742,6 +2647,37 @@ async function createServer({ repositories, runtime }) {
           success: true,
           complaints: complaints.map(complaintSummaryForCitizen),
         });
+        return;
+      }
+
+      if (method === "POST" && pathname === "/api/complaints/anonymous") {
+        const ip = getClientIp(req);
+        if (!checkRateLimit(anonymousComplaintRateLimiter, ip, 5)) {
+          sendJson(res, 429, { success: false, message: "Too many anonymous complaints. Try again in an hour." });
+          return;
+        }
+        const anonBody = await readJsonBody(req);
+        anonBody.title = String(anonBody.title || anonBody.description || "Anonymous Complaint").trim().slice(0, 120);
+        anonBody.category = String(anonBody.category || "other").trim();
+        anonBody.locationText = String(anonBody.location || anonBody.locationText || "").trim();
+        anonBody.anonymous = true;
+        anonBody.contactPhone = String(anonBody.phone || "").trim();
+        anonBody.contactName = "";
+        anonBody.contactEmail = "";
+        if (anonBody.ward_number) anonBody.wardNumber = String(anonBody.ward_number);
+        if (!anonBody.description || !anonBody.locationText) {
+          sendJson(res, 400, { success: false, message: "Description and location are required." });
+          return;
+        }
+        const syntheticActor = {
+          principalId: "",
+          role: "citizen",
+          name: "Anonymous",
+          mobileNumber: anonBody.contactPhone,
+          email: "",
+          citizenCode: "",
+        };
+        await handleComplaintCreate(req, res, repositories, syntheticActor, anonBody);
         return;
       }
 
@@ -1784,6 +2720,41 @@ async function createServer({ repositories, runtime }) {
         return;
       }
 
+      if (method === "GET" && pathname === "/api/officer/handover-queue") {
+        const actor = await requireAuth(req, res, repositories, ["department", "ward"]);
+        if (!actor) return;
+
+        const [account, allComplaints] = await Promise.all([
+          repositories.officeAccounts.findById(actor.principalId),
+          repositories.complaints.listAll(),
+        ]);
+
+        // Find complaints that were resolved by officers in the same office scope
+        // but whose assignment week was NOT the current week (i.e., outgoing rotation).
+        const currentWeek = getCurrentWeekKey();
+        const previousWeekSolvedComplaints = allComplaints.filter((complaint) => {
+          if (complaint.status !== "solved") return false;
+          // Must belong to the same office scope as the incoming officer
+          if (actor.officeType === "ward") {
+            return String(complaint.wardNumber) === String(account?.wardNumber || actor.wardNumber);
+          }
+          return complaint.divisionName === (account?.divisionName || actor.divisionName)
+            && complaint.sectionName === (account?.sectionName || actor.sectionName);
+        }).filter((complaint) => {
+          // Resolved before this week started (i.e., by previous rotation)
+          const resolvedAt = complaint.updatedAt || complaint.createdAt;
+          const weekStart = startOfCurrentWeek();
+          return new Date(resolvedAt).getTime() < weekStart.getTime();
+        });
+
+        sendJson(res, 200, {
+          success: true,
+          handoverComplaints: previousWeekSolvedComplaints.map(complaintSummaryForOfficer),
+          currentWeek,
+        });
+        return;
+      }
+
       if (method === "GET" && pathname === "/api/admin/analytics") {
         const actor = await requireAuth(req, res, repositories, ["admin"]);
         if (!actor) return;
@@ -1820,6 +2791,7 @@ async function createServer({ repositories, runtime }) {
 
       const departmentCodeMatch = pathname.match(/^\/api\/admin\/departments\/([^/]+)$/);
       const officerIdMatch = pathname.match(/^\/api\/admin\/officers\/([^/]+)$/);
+      const officerAdjustmentMatch = pathname.match(/^\/api\/admin\/officers\/([^/]+)\/adjustments\/(\d+)$/);
       const oversightDecisionMatch = pathname.match(/^\/api\/admin\/oversight\/([^/]+)$/);
       const complaintTokenMatch = pathname.match(/^\/api\/complaints\/([^/]+)$/);
       const complaintCommentMatch = pathname.match(/^\/api\/complaints\/([^/]+)\/comments$/);
@@ -1827,6 +2799,7 @@ async function createServer({ repositories, runtime }) {
       const complaintEtaMatch = pathname.match(/^\/api\/complaints\/([^/]+)\/eta$/);
       const complaintForwardMatch = pathname.match(/^\/api\/complaints\/([^/]+)\/forward$/);
       const complaintFeedbackMatch = pathname.match(/^\/api\/complaints\/([^/]+)\/feedback$/);
+      const complaintHandoverFlagMatch = pathname.match(/^\/api\/complaints\/([^/]+)\/handover-flag$/);
 
       if (departmentCodeMatch) {
         const actor = await requireAuth(req, res, repositories, ["admin"]);
@@ -1889,6 +2862,14 @@ async function createServer({ repositories, runtime }) {
           : getEffectiveAssignmentWeeks(officer);
         const isActive = body.active === undefined ? officer.status === "active" : Boolean(body.active);
         const nextOfficeType = body.officeType !== undefined ? String(body.officeType || officer.officeType).trim() : officer.officeType;
+        const departmentRecords = nextOfficeType === "department" ? await repositories.departments.listDepartments() : [];
+        const resolvedDepartment = nextOfficeType === "department"
+          ? resolveDepartmentRoutingTarget(departmentRecords, {
+            departmentCode: body.departmentCode !== undefined ? String(body.departmentCode || "").trim().toUpperCase() : officer.departmentCode || "",
+            divisionName: body.divisionName !== undefined ? String(body.divisionName || "").trim() : officer.divisionName || "",
+            sectionName: body.sectionName !== undefined ? String(body.sectionName || "").trim() : officer.sectionName || "",
+          })
+          : { departmentCode: "", divisionName: "", sectionName: "" };
         const patch = {
           role: nextOfficeType === "ward" ? "ward" : "department",
           officeType: nextOfficeType,
@@ -1897,13 +2878,13 @@ async function createServer({ repositories, runtime }) {
           email: body.email !== undefined ? String(body.email || "").trim() : officer.email || "",
           phone: body.phone !== undefined ? String(body.phone || "").trim() : officer.phone || "",
           departmentCode: nextOfficeType === "department"
-            ? (body.departmentCode !== undefined ? String(body.departmentCode || "").trim().toUpperCase() : officer.departmentCode || "")
+            ? resolvedDepartment.departmentCode
             : "",
           divisionName: nextOfficeType === "department"
-            ? (body.divisionName !== undefined ? String(body.divisionName || "").trim() : officer.divisionName || "")
+            ? resolvedDepartment.divisionName
             : "",
           sectionName: nextOfficeType === "department"
-            ? (body.sectionName !== undefined ? String(body.sectionName || "").trim() : officer.sectionName || "")
+            ? resolvedDepartment.sectionName
             : "",
           wardNumber: nextOfficeType === "ward"
             ? (body.wardNumber !== undefined ? String(body.wardNumber || "").trim() : officer.wardNumber || "")
@@ -1914,8 +2895,27 @@ async function createServer({ repositories, runtime }) {
           activationExpiresAt: isActive ? (officer.activationExpiresAt || endOfCurrentWeek()) : null,
         };
 
+        if (nextOfficeType === "department" && (!patch.departmentCode || !patch.divisionName || !patch.sectionName)) {
+          sendJson(res, 400, { success: false, message: "Department and sub-department are required for department officers." });
+          return;
+        }
+
+        if (nextOfficeType === "ward" && !patch.wardNumber) {
+          sendJson(res, 400, { success: false, message: "Ward number is required for ward officers." });
+          return;
+        }
+
         if (body.password) {
           patch.passwordHash = hashPassword(String(body.password));
+        }
+
+        // Handle a single performanceAdjustment object sent alongside other fields
+        if (body.performanceAdjustment && typeof body.performanceAdjustment === "object") {
+          await applyPerformanceAdjustment(repositories, String(officer._id), {
+            points: Number(body.performanceAdjustment.points || 0),
+            message: String(body.performanceAdjustment.message || ""),
+            pending: Boolean(body.performanceAdjustment.pending),
+          });
         }
 
         await repositories.officeAccounts.updateOfficeAccount(String(officer._id), patch);
@@ -1940,6 +2940,7 @@ async function createServer({ repositories, runtime }) {
         const body = await readJsonBody(req);
         const action = String(body.action || "").trim();
         const comment = String(body.comment || "").trim();
+        const targetDepartmentCode = String(body.targetDepartmentCode || "").trim().toUpperCase();
         const targetDivisionName = String(body.targetDivisionName || "").trim();
         const targetSectionName = String(body.targetSectionName || "").trim();
 
@@ -1967,19 +2968,26 @@ async function createServer({ repositories, runtime }) {
             forwardedToLabel: "Transferred to higher level authority",
           });
         } else if (action === "transfer_department") {
-          if (!targetDivisionName || !targetSectionName) {
+          const departmentRecords = await repositories.departments.listDepartments();
+          const resolvedTarget = resolveDepartmentRoutingTarget(departmentRecords, {
+            departmentCode: targetDepartmentCode,
+            divisionName: targetDivisionName,
+            sectionName: targetSectionName,
+          });
+
+          if (!resolvedTarget.divisionName || !resolvedTarget.sectionName) {
             sendJson(res, 400, { success: false, message: "Target department and sub-department are required." });
             return;
           }
 
           const forwardingResult = await assignSpecificOffice(repositories, {
             officeType: "department",
-            divisionName: targetDivisionName,
-            sectionName: targetSectionName,
+            divisionName: resolvedTarget.divisionName,
+            sectionName: resolvedTarget.sectionName,
           });
 
           await repositories.complaints.updateComplaint(tokenNumber, {
-            status: "pending",
+            status: forwardingResult.officeType === "central_admin" ? "escalated" : "pending",
             officeType: forwardingResult.officeType,
             divisionName: forwardingResult.divisionName || "",
             sectionName: forwardingResult.sectionName || "",
@@ -2004,6 +3012,43 @@ async function createServer({ repositories, runtime }) {
           await applyOfficerActionReviewDecision(repositories, complaint, true, comment);
         } else if (action === "dismiss_review") {
           await applyOfficerActionReviewDecision(repositories, complaint, false, comment);
+        } else if (action === "verify_handover_flag") {
+          // Admin confirms the incoming officer's flag is valid:
+          // deduct points from outgoing officer, award points to flagging officer, re-open complaint
+          if (!complaint.handoverFlag) {
+            sendJson(res, 400, { success: false, message: "No handover flag on this complaint." });
+            return;
+          }
+          const outgoingOfficerId = complaint.assignedOfficerId;
+          const flaggingOfficerId = complaint.handoverFlag.flaggedByOfficerId;
+          if (outgoingOfficerId) {
+            await applyPerformanceAdjustment(repositories, outgoingOfficerId, {
+              points: -15,
+              message: `Handover flag verified: ${complaint.handoverFlag.reason}`,
+            });
+          }
+          if (flaggingOfficerId) {
+            await applyPerformanceAdjustment(repositories, flaggingOfficerId, {
+              points: 10,
+              message: "Points awarded for valid handover flag catch.",
+            });
+          }
+          await repositories.complaints.updateComplaint(tokenNumber, {
+            handoverFlagStatus: "verified",
+            status: "in_progress",
+            escalated: false,
+          });
+        } else if (action === "reject_handover_flag") {
+          // Admin dismisses the flag — complaint stays solved, no point changes
+          if (!complaint.handoverFlag) {
+            sendJson(res, 400, { success: false, message: "No handover flag on this complaint." });
+            return;
+          }
+          await repositories.complaints.updateComplaint(tokenNumber, {
+            handoverFlagStatus: "rejected",
+            status: "solved",
+            escalated: false,
+          });
         } else {
           sendJson(res, 400, { success: false, message: "Invalid oversight action." });
           return;
@@ -2303,6 +3348,219 @@ async function createServer({ repositories, runtime }) {
           `${forwardedToLabel}${comment ? ` | ${comment}` : ""}`,
         );
         sendJson(res, 200, { success: true, message: "Complaint forwarded successfully." });
+        return;
+      }
+
+      // PATCH /api/admin/officers/:id/adjustments/:index — verify or reject a pending point adjustment
+      if (officerAdjustmentMatch && method === "PATCH") {
+        const actor = await requireAuth(req, res, repositories, ["admin"]);
+        if (!actor) return;
+
+        const officerId = officerAdjustmentMatch[1];
+        const adjustmentIndex = parseInt(officerAdjustmentMatch[2], 10);
+        const officer = await repositories.officeAccounts.findById(officerId);
+        if (!officer) {
+          sendJson(res, 404, { success: false, message: "Officer not found." });
+          return;
+        }
+
+        const adjustments = Array.isArray(officer.performanceAdjustments) ? officer.performanceAdjustments : [];
+        if (adjustmentIndex < 0 || adjustmentIndex >= adjustments.length) {
+          sendJson(res, 400, { success: false, message: "Invalid adjustment index." });
+          return;
+        }
+
+        const body = await readJsonBody(req);
+        const action = String(body.action || "").trim();
+        if (!["verify", "reject"].includes(action)) {
+          sendJson(res, 400, { success: false, message: "Action must be 'verify' or 'reject'." });
+          return;
+        }
+
+        const nextAdjustments = adjustments.map((entry, idx) =>
+          idx === adjustmentIndex ? { ...entry, status: action === "verify" ? "verified" : "rejected" } : entry
+        );
+
+        await repositories.officeAccounts.updateOfficeAccount(officerId, {
+          performanceAdjustments: nextAdjustments,
+        });
+
+        sendJson(res, 200, { success: true, message: `Adjustment ${action === "verify" ? "verified" : "rejected"}.` });
+        return;
+      }
+
+      // POST /api/complaints/:tokenNumber/handover-flag
+      if (complaintHandoverFlagMatch && method === "POST") {
+        const actor = await requireAuth(req, res, repositories, ["department", "ward"]);
+        if (!actor) return;
+
+        const tokenNumber = complaintHandoverFlagMatch[1];
+        const complaint = await repositories.complaints.findByTokenNumber(tokenNumber);
+
+        if (!complaint) {
+          sendJson(res, 404, { success: false, message: "Complaint not found." });
+          return;
+        }
+        if (complaint.status !== "solved") {
+          sendJson(res, 400, { success: false, message: "Only solved complaints can be flagged during handover." });
+          return;
+        }
+        if (complaint.handoverFlagStatus === "pending") {
+          sendJson(res, 409, { success: false, message: "This complaint already has a pending handover flag." });
+          return;
+        }
+
+        // Verify the flagging officer is in the same routing bucket as the complaint
+        const inSameBucket = actor.role === "ward"
+          ? String(complaint.wardNumber) === String(actor.wardNumber)
+          : complaint.divisionName === actor.divisionName && complaint.sectionName === actor.sectionName;
+
+        if (!inSameBucket) {
+          sendJson(res, 403, { success: false, message: "You can only flag complaints assigned to your department/ward." });
+          return;
+        }
+
+        const body = await readJsonBody(req);
+        const reason = String(body.reason || "").trim();
+        if (!reason) {
+          sendJson(res, 400, { success: false, message: "A reason is required when flagging a complaint." });
+          return;
+        }
+
+        await repositories.complaints.updateComplaint(tokenNumber, {
+          handoverFlag: {
+            flaggedByOfficerId: actor.principalId,
+            flaggedByOfficerName: actor.name,
+            reason,
+            flaggedAt: new Date(),
+          },
+          handoverFlagStatus: "pending",
+          status: "pending_admin_verification",
+        });
+
+        await appendHistoryEntry(repositories, complaint, actor, "handover_flagged", `Flagged during handover: ${reason}`);
+
+        sendJson(res, 200, { success: true, message: "Complaint flagged for admin review." });
+        return;
+      }
+
+      if (method === "POST" && pathname === "/api/chatbot") {
+        const ip = getClientIp(req);
+        if (!checkRateLimit(chatbotRateLimiter, ip, 30)) {
+          sendJson(res, 429, { success: false, message: "Rate limit exceeded. Try again in an hour." });
+          return;
+        }
+        const chatBody = await readJsonBody(req);
+        const latestUserMessage = typeof chatBody.message === "string"
+          ? chatBody.message
+          : Array.isArray(chatBody.messages)
+            ? [...chatBody.messages].reverse().find((entry) => entry?.role === "user" && typeof entry.content === "string")?.content || ""
+            : "";
+        const imageDescription = typeof chatBody.image_description === "string"
+          ? chatBody.image_description.trim().slice(0, 200)
+          : "";
+
+        if (latestUserMessage.length > 1000) {
+          sendJson(res, 400, { success: false, message: "Message is too long." });
+          return;
+        }
+
+        const fallbackLanguage = chatBody.language === "ne" ? "ne" : "en";
+        let draft = parseChatbotDraft(chatBody.draft || {}, fallbackLanguage);
+        draft = mergeChatbotDraft(draft, { language: detectChatbotLanguage(latestUserMessage, draft.language || fallbackLanguage) }, fallbackLanguage);
+
+        if (isChatbotCancelText(latestUserMessage)) {
+          const reply = draft.language === "ne"
+            ? "ठीक छ। यो गुनासो संवाद यहीं रोकियो। फेरि सुरु गर्न चाहनुहुन्छ भने नयाँ सन्देश पठाउनुहोस्।"
+            : "Understood. I have cancelled this complaint conversation. Send a new message whenever you want to start again.";
+          sendJson(res, 200, {
+            success: true,
+            reply,
+            draft: parseChatbotDraft({}, draft.language),
+            readyToSubmit: false,
+            cancelled: true,
+            language: draft.language,
+          });
+          return;
+        }
+
+        if (!latestUserMessage.trim() && imageDescription) {
+          const reply = draft.language === "ne"
+            ? "मैले तस्बिर संलग्न भएको देखेँ। कृपया समस्या के हो र कहाँ हो भन्ने छोटो विवरण पनि दिनुहोस्।"
+            : "I can see that an image has been attached. Please also tell me what the issue is and where it is located.";
+          sendJson(res, 200, {
+            success: true,
+            reply,
+            draft,
+            readyToSubmit: false,
+            cancelled: false,
+            language: draft.language,
+          });
+          return;
+        }
+
+        const missingBefore = identifyChatbotMissingRequired(draft);
+        const canInterpretConfirmation = missingBefore.length === 0;
+        const wantsConfirmation = canInterpretConfirmation && isChatbotConfirmationText(latestUserMessage);
+        const wantsPhoneSkip = missingBefore.length === 0 && !draft.phone && isChatbotPhoneSkipText(latestUserMessage);
+
+        const localPatch = buildLocalChatbotPatch(latestUserMessage, draft, fallbackLanguage);
+        if (wantsPhoneSkip) {
+          localPatch.phoneSkipped = true;
+        }
+
+        let aiPatch = null;
+        if (shouldUseDeepSeekForChatbot(latestUserMessage, draft, localPatch)) {
+          aiPatch = await callDeepSeekChatbotExtraction({
+            message: latestUserMessage,
+            draft,
+            imageDescription,
+          });
+        }
+
+        const mergedPatch = {
+          ...(aiPatch || {}),
+          language: localPatch.language || aiPatch?.language || draft.language,
+          categoryHint: localPatch.categoryHint || aiPatch?.categoryHint || "",
+          department: localPatch.department || aiPatch?.department || "",
+          location: (localPatch.location && (!aiPatch?.location || aiPatch.location === aiPatch.description))
+            ? localPatch.location
+            : (aiPatch?.location || localPatch.location || ""),
+          description: aiPatch?.description || localPatch.description || "",
+          ward_number: localPatch.ward_number ?? aiPatch?.ward_number ?? null,
+          phone: localPatch.phone || aiPatch?.phone || "",
+          phoneSkipped: localPatch.phoneSkipped || false,
+        };
+
+        draft = mergeChatbotDraft(draft, mergedPatch, fallbackLanguage);
+
+        if (!draft.department) {
+          const inferredFromDescription = inferDepartmentFromText(`${draft.description} ${latestUserMessage}`);
+          if (inferredFromDescription) {
+            draft = mergeChatbotDraft(draft, {
+              categoryHint: inferredFromDescription.category,
+              department: labelChatbotDepartment(inferredFromDescription, draft.language),
+            }, draft.language);
+          }
+        }
+
+        let readyToSubmit = false;
+        if (identifyChatbotMissingRequired(draft).length === 0 && wantsConfirmation) {
+          if (!draft.phone) {
+            draft = mergeChatbotDraft(draft, { phoneSkipped: true }, draft.language);
+          }
+          readyToSubmit = true;
+        }
+
+        const reply = buildChatbotReply(draft, draft.language, { confirmed: readyToSubmit });
+        sendJson(res, 200, {
+          success: true,
+          reply,
+          draft,
+          readyToSubmit,
+          cancelled: false,
+          language: draft.language,
+        });
         return;
       }
 

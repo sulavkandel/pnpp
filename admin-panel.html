@@ -11,16 +11,20 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="./frontend/src/styles/main.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script type="module" src="./frontend/src/scripts/admin-panel.js"></script>
   </head>
   <body class="admin-orbit-body">
     <div class="admin-orbit-shell">
       <header class="admin-orbit-hero">
         <div class="admin-orbit-hero-top">
-          <div>
-            <p class="admin-orbit-kicker">जनसेवा · पोखरा महानगरपालिका · Central Command</p>
-            <h1>Central Admin Command Panel</h1>
-            <p class="admin-orbit-subtitle">Officer activation, escalation decisions, validation review, and municipal analytics in one control room.</p>
+          <div class="admin-orbit-lockup">
+            <div class="brand-mark crest">नेपाल</div>
+            <div>
+              <p class="admin-orbit-kicker">नेपाल सरकार · पोखरा महानगरपालिका · Central Command</p>
+              <h1>Central Admin Command Panel</h1>
+              <p class="admin-orbit-subtitle">Officer activation, escalation decisions, validation review, and municipal analytics in one control room.</p>
+            </div>
           </div>
           <div class="admin-orbit-hero-tools">
             <div class="admin-orbit-date" id="admin-live-date"></div>
@@ -50,6 +54,10 @@
             <span>Analytics & Reports</span>
             <strong id="nav-analytics-rate">0%</strong>
           </button>
+          <button type="button" class="admin-orbit-nav" data-section="departments">
+            <span>Departments</span>
+            <strong id="nav-dept-count">0</strong>
+          </button>
         </aside>
 
         <main class="admin-orbit-main">
@@ -62,7 +70,7 @@
                     <h3>Complaint load by department</h3>
                   </div>
                 </div>
-                <div id="dashboard-department-chart"></div>
+                <div style="position:relative;height:220px"><canvas id="dashboard-department-chart"></canvas></div>
               </article>
               <article class="admin-orbit-panel">
                 <div class="admin-orbit-panel-head">
@@ -71,7 +79,7 @@
                     <h3>Solved complaints by department</h3>
                   </div>
                 </div>
-                <div id="dashboard-solved-chart"></div>
+                <div style="position:relative;height:220px"><canvas id="dashboard-solved-chart"></canvas></div>
               </article>
             </div>
 
@@ -260,6 +268,8 @@
                       <select name="invalidAction" id="oversight-invalid-action">
                         <option value="approve_invalid">Approve invalid marking</option>
                         <option value="reject_invalid">Reject invalid marking</option>
+                        <option value="verify_handover_flag">✓ Verify handover flag (deduct outgoing officer pts)</option>
+                        <option value="reject_handover_flag">✗ Reject handover flag (restore to solved)</option>
                       </select>
                     </label>
                   </div>
@@ -331,7 +341,7 @@
                     <h3>Pending vs in-progress vs solved</h3>
                   </div>
                 </div>
-                <div id="analytics-status-chart"></div>
+                <div style="position:relative;height:220px"><canvas id="analytics-status-chart"></canvas></div>
               </article>
               <article class="admin-orbit-panel">
                 <div class="admin-orbit-panel-head">
@@ -340,7 +350,7 @@
                     <h3>Department transfers vs higher-level transfers</h3>
                   </div>
                 </div>
-                <div id="analytics-forward-chart"></div>
+                <div style="position:relative;height:220px"><canvas id="analytics-forward-chart"></canvas></div>
               </article>
             </div>
 
@@ -362,6 +372,41 @@
                   </div>
                 </div>
                 <div id="analytics-report-table"></div>
+              </article>
+            </div>
+          </section>
+
+          <section class="admin-orbit-section" id="section-departments">
+            <div class="admin-orbit-grid">
+              <article class="admin-orbit-panel">
+                <div class="admin-orbit-panel-head">
+                  <div><p class="eyebrow small">Department registry</p><h3>Add / Edit Department</h3></div>
+                </div>
+                <form class="admin-orbit-form" id="dept-form">
+                  <input type="hidden" name="editingCode" id="dept-editing-code" />
+                  <label><span>Department code</span><input type="text" name="code" id="dept-code" placeholder="e.g. INFRA" required /></label>
+                  <label><span>Full name</span><input type="text" name="name" id="dept-name" placeholder="Infrastructure Development" required /></label>
+                  <label>
+                    <span>Type</span>
+                    <select name="type" id="dept-type">
+                      <option value="Mahashakha">Mahashakha (Division)</option>
+                      <option value="Upa-Sakha">Upa-Sakha (Sub-division)</option>
+                      <option value="Ward Office">Ward Office</option>
+                    </select>
+                  </label>
+                  <label><span>Description</span><textarea name="description" id="dept-description" rows="2" placeholder="Brief description"></textarea></label>
+                  <div class="admin-orbit-form-actions">
+                    <button type="submit" class="button">Save Department</button>
+                    <button type="button" class="button secondary" id="dept-reset-button">Reset</button>
+                  </div>
+                  <p id="dept-form-message" class="form-message"></p>
+                </form>
+              </article>
+              <article class="admin-orbit-panel">
+                <div class="admin-orbit-panel-head">
+                  <div><p class="eyebrow small">Registered departments</p><h3>Department List</h3></div>
+                </div>
+                <div id="dept-list"></div>
               </article>
             </div>
           </section>

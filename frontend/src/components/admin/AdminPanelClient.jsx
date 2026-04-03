@@ -228,6 +228,11 @@ export function AdminPanelClient({ initialSection = "dashboard", initialOversigh
       ? department.subDepartments.map((item) => String(item).trim()).filter(Boolean)
       : [];
     if (directSections.length) return directSections;
+    const childSections = departments
+      .filter((item) => String(item.parentCode || "").trim().toUpperCase() === String(departmentCode || "").trim().toUpperCase())
+      .map((item) => String(item.name || "").trim())
+      .filter(Boolean);
+    if (childSections.length) return childSections;
     return department?.name ? [department.name] : [];
   };
 

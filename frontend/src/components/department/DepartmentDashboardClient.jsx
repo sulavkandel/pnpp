@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Activity,
@@ -310,6 +310,7 @@ export function DepartmentDashboardClient({ initialTab = "new" }) {
   const [handoverComplaints, setHandoverComplaints] = useState([]);
   const [selectedComplaintToken, setSelectedComplaintToken] = useState("");
   const [selectedComplaintDetail, setSelectedComplaintDetail] = useState(null);
+  const reviewPanelRef = useRef(null);
   const [activeTab, setActiveTab] = useState(initialTab);
   const [loadingError, setLoadingError] = useState("");
   const [reviewAction, setReviewAction] = useState("in_progress");
@@ -508,6 +509,12 @@ export function DepartmentDashboardClient({ initialTab = "new" }) {
       ignore = true;
     };
   }, [departmentAuthToken, dashboard, handoverComplaints, selectedComplaintToken, text.actionFailed]);
+
+  useEffect(() => {
+    if (selectedComplaintToken && reviewPanelRef.current) {
+      reviewPanelRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [selectedComplaintToken]);
 
   useEffect(() => {
     if (!reviewFields.forwardDivision && departmentCatalog[0]) {
@@ -1166,7 +1173,7 @@ export function DepartmentDashboardClient({ initialTab = "new" }) {
                 </section>
               )}
 
-              <div className="panel top-gap">
+              <div className="panel top-gap" ref={reviewPanelRef}>
                 <div className="panel-header">
                   <div>
                     <p className="eyebrow small">{text.reviewEyebrow}</p>

@@ -181,8 +181,9 @@ export function TrackPageClient({ initialQuery = "" }) {
                 value={trackQuery}
                 placeholder={t.placeholder}
                 onChange={(event) => setTrackQuery(event.target.value)}
+                onKeyDown={(event) => { if (event.key === "Enter") handleTrack(); }}
               />
-              <button type="button" className="button dark" onClick={handleTrack}>{t.search}</button>
+              <button type="button" className="button dark" onClick={() => handleTrack()}>{t.search}</button>
             </div>
             {message.text ? <div className={`form-message ${message.type}`}>{message.text}</div> : null}
           </div>

@@ -211,7 +211,18 @@ export function PublicComplaintPageClient() {
   }, [language]);
 
   async function handleFilesChange(event) {
+    const MAX_IMAGE_BYTES = 1_800_000; // ~1.8MB binary → ~2.4MB base64, within backend 2.5M limit
+    const MAX_ATTACH_BYTES = 3_300_000; // ~3.3MB binary → ~4.4MB base64, within backend 4.5M limit
     const files = [...(event.target.files || [])].slice(0, 5);
+    const oversized = files.find((f) =>
+      f.type.startsWith("image/") ? f.size > MAX_IMAGE_BYTES : f.size > MAX_ATTACH_BYTES
+    );
+    if (oversized) {
+      setMessage({ type: "error", text: language === "ne"
+        ? `"${oversized.name}" धेरै ठूलो छ। प्रमाण फोटो अधिकतम १.८ MB हुनुपर्छ।`
+        : `"${oversized.name}" is too large. Proof image must be under 1.8 MB.` });
+      return;
+    }
     const payloads = await Promise.all(files.map(readAsDataUrl));
     setAttachments(payloads);
   }

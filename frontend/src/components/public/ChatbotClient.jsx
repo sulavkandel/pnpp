@@ -818,15 +818,7 @@ export function ChatbotWidget({ initialLanguage = "en", mode = "citizen" }) {
 
   return (
     <div className={`stitch-chat-dock ${isOpen ? "is-open" : ""} ${showCitizenNudge ? "is-popping" : ""}`}>
-      {showCitizenNudge ? (
-        <div className="stitch-chat-nudge" aria-hidden="true">
-          <Sparkles size={14} />
-          <div className="stitch-chat-nudge-copy">
-            <strong>{t.nudgeTitle}</strong>
-            <span>{t.nudgeBody}</span>
-          </div>
-        </div>
-      ) : null}
+      {null}
 
       {isOpen ? (
         <div className="stitch-chat-dock-panel">

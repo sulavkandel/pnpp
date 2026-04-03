@@ -1349,12 +1349,9 @@ async function appendHistoryEntry(repositories, complaint, actor, action, note) 
 function isWithinOfficerOfficeScope(actor, complaint) {
   if (!actor || !complaint) return false;
   if (actor.role === "department") {
+    // Allow access to any complaint in the same division — matches dashboard filter logic
     return complaint.officeType === "department"
-      && complaint.divisionName === (actor.divisionName || "")
-      && (
-        !actor.sectionName
-        || complaint.sectionName === (actor.sectionName || "")
-      );
+      && complaint.divisionName === (actor.divisionName || "");
   }
 
   if (actor.role === "ward") {
@@ -3196,6 +3193,41 @@ async function createServer({ repositories, runtime }) {
         }
 
         await repositories.complaints.updateComplaint(complaint.tokenNumber, patch);
+
+        // Award citizen points when solved
+        if (status === "solved" && !complaint.validityVerified && !complaint.anonymous && complaint.citizenId) {
+          const citizenPoints = pointsForComplaint(complaint);
+          try {
+            const citizenUser = await repositories.users.findById(complaint.citizenId);
+            if (citizenUser) {
+              const currentPoints = Number(citizenUser.rewardPoints || 0);
+              await repositories.users.updateUser(complaint.citizenId, { rewardPoints: currentPoints + citizenPoints });
+            }
+          } catch {}
+        }
+
+        // Award officer points when solved
+        if (status === "solved" && !complaint.validityVerified && actor.role !== "admin") {
+          const officerPoints = officerPointsForComplaint({ ...complaint, updatedAt: new Date() });
+          try {
+            const officerAccount = await repositories.officeAccounts.findById(actor.principalId);
+            if (officerAccount) {
+              const existing = officerAccount.performanceAdjustments || [];
+              await repositories.officeAccounts.updateOfficeAccount(actor.principalId, {
+                performanceAdjustments: [
+                  ...existing,
+                  {
+                    points: officerPoints,
+                    message: `Solved complaint ${complaint.tokenNumber} (+${officerPoints} pts)`,
+                    status: "verified",
+                    createdAt: new Date(),
+                  },
+                ],
+              });
+            }
+          } catch {}
+        }
+
         if (comment) {
           await appendCommentAndHistory(repositories, complaint, actor, comment, "public");
         }

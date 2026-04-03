@@ -346,6 +346,7 @@ const trackInput = document.getElementById("track-query-input");
 const trackMessage = document.getElementById("track-message");
 const trackStatusPill = document.getElementById("track-status-pill");
 
+trackInput?.addEventListener("keydown", (event) => { if (event.key === "Enter") trackButton?.click(); });
 trackButton?.addEventListener("click", async () => {
   const query = String(trackInput?.value || "").trim();
   trackMessage.className = "form-message";
